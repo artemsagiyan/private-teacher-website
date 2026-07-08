@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(node --version; npm --version; \\(Get-Command npm\\).Source)",
+      "PowerShell(Get-Command node -ErrorAction SilentlyContinue; $env:PATH -split ';' | Where-Object { $_ -match 'node' -or $_ -match 'npm' })"
+    ]
+  }
+}

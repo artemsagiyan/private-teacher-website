@@ -1,0 +1,325 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design Tokens */
+@layer base {
+  :root {
+    --bg:         248 248 255;
+    --surface:    255 255 255;
+    --surface-2:  244 244 252;
+    --border:     226 228 240;
+    --border-sub: 241 242 248;
+    --text:        15  23  42;
+    --text-2:     100 116 139;
+    --text-3:     148 163 184;
+    --primary:     99 102 241;
+    --primary-fg: 255 255 255;
+    --primary-bg:  99 102 241 / 0.08;
+    --success:     16 185 129;
+    --warning:    245 158  11;
+    --danger:     239  68  68;
+    --sidebar-bg: 10  10  20;
+    --sidebar-border: 28 28 46;
+  }
+
+  .dark {
+    --bg:          7   7  15;
+    --surface:    12  12  24;
+    --surface-2:  18  18  34;
+    --border:     30  30  54;
+    --border-sub: 22  22  40;
+    --text:       248 250 252;
+    --text-2:     148 163 184;
+    --text-3:     100 116 139;
+    --primary:    129 140 248;
+    --primary-fg: 255 255 255;
+    --primary-bg: 99 102 241 / 0.12;
+    --success:     52 211 153;
+    --warning:    251 191  36;
+    --danger:     252 165 165;
+    --sidebar-bg: 8   8  18;
+    --sidebar-border: 26 26 44;
+  }
+
+  * {
+    border-color: rgb(var(--border) / 0.8);
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: rgb(var(--bg));
+    color: rgb(var(--text));
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  ::selection {
+    background-color: rgb(99 102 241 / 0.18);
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar       { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgb(var(--border)); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgb(var(--text-3)); }
+}
+
+/* Utility classes */
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+
+  .grad-text {
+    background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .glass {
+    backdrop-filter: blur(20px) saturate(160%);
+    background: rgb(var(--surface) / 0.75);
+    border: 1px solid rgb(var(--border) / 0.5);
+  }
+
+  .icon-blue   { background: linear-gradient(135deg, #3b82f6, #6366f1); }
+  .icon-violet { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+  .icon-green  { background: linear-gradient(135deg, #10b981, #34d399); }
+  .icon-orange { background: linear-gradient(135deg, #f59e0b, #fb923c); }
+  .icon-red    { background: linear-gradient(135deg, #ef4444, #f87171); }
+  .icon-cyan   { background: linear-gradient(135deg, #06b6d4, #22d3ee); }
+
+  .skeleton {
+    background: linear-gradient(90deg,
+      rgb(var(--surface-2)) 0%,
+      rgb(var(--border)) 50%,
+      rgb(var(--surface-2)) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+}
+
+/* Sidebar */
+.sidebar {
+  background: rgb(var(--sidebar-bg));
+  border-right: 1px solid rgb(var(--sidebar-border));
+}
+
+/* FullCalendar — Yandex Calendar Style */
+
+.fc {
+  font-family: inherit;
+  --fc-border-color:       rgb(var(--border) / 0.7);
+  --fc-today-bg-color:     rgb(99 102 241 / 0.04);
+  --fc-page-bg-color:      transparent;
+  --fc-neutral-bg-color:   transparent;
+  --fc-event-bg-color:     #6366f1;
+  --fc-event-border-color: transparent;
+  --fc-event-text-color:   #fff;
+  --fc-small-font-size:    0.72rem;
+}
+
+/* Remove outer border, keep inner grid lines subtle */
+.fc-theme-standard .fc-scrollgrid {
+  border: none !important;
+}
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: rgb(var(--border) / 0.55) !important;
+}
+
+/* Hide 30-min divider lines — only hour lines show */
+.fc .fc-timegrid-slot-minor {
+  border-top-color: transparent !important;
+}
+
+/* Today column — very faint indigo wash */
+.fc .fc-day-today {
+  background: rgb(99 102 241 / 0.04) !important;
+}
+
+/* Toolbar */
+.fc .fc-toolbar {
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 0 !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid rgb(var(--border) / 0.55) !important;
+  align-items: center !important;
+}
+.fc .fc-toolbar-title {
+  font-size: 0.88rem !important;
+  font-weight: 600 !important;
+  color: rgb(var(--text)) !important;
+  letter-spacing: -0.01em !important;
+  margin: 0 6px !important;
+}
+
+/* Toolbar buttons */
+.fc .fc-button {
+  background: transparent !important;
+  border: 1px solid rgb(var(--border)) !important;
+  color: rgb(var(--text-2)) !important;
+  border-radius: 7px !important;
+  padding: 3px 10px !important;
+  font-size: 0.77rem !important;
+  font-weight: 500 !important;
+  box-shadow: none !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+  transition: background 120ms, color 100ms !important;
+}
+.fc .fc-button:hover {
+  background: rgb(var(--surface-2)) !important;
+  color: rgb(var(--text)) !important;
+}
+.fc .fc-button:focus { box-shadow: none !important; outline: none !important; }
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background: rgb(99 102 241 / 0.1) !important;
+  color: #6366f1 !important;
+  border-color: rgb(99 102 241 / 0.25) !important;
+}
+.fc .fc-button-group .fc-button            { border-radius: 0 !important; }
+.fc .fc-button-group .fc-button:first-child { border-radius: 7px 0 0 7px !important; }
+.fc .fc-button-group .fc-button:last-child  { border-radius: 0 7px 7px 0 !important; }
+
+/* Column headers */
+.fc .fc-col-header-cell {
+  background: rgb(var(--surface)) !important;
+  border-bottom: 1px solid rgb(var(--border) / 0.55) !important;
+  border-top: none !important;
+  padding: 0 !important;
+}
+.fc .fc-col-header-cell-cushion {
+  display: block !important;
+  text-decoration: none !important;
+  cursor: default !important;
+  padding: 0 !important;
+}
+
+/* Custom day header: weekday abbreviation + date circle */
+.cal-day-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 7px 4px 9px;
+  gap: 3px;
+  line-height: 1;
+}
+.cal-weekday {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: rgb(var(--text-3));
+}
+.cal-daynum {
+  font-size: 19px;
+  font-weight: 300;
+  color: rgb(var(--text));
+  width: 33px;
+  height: 33px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+.cal-daynum.cal-today {
+  background: #6366f1;
+  color: #fff !important;
+  font-weight: 600 !important;
+}
+
+/* Time axis */
+.fc .fc-timegrid-axis,
+.fc .fc-timegrid-slot-label {
+  border: none !important;
+  vertical-align: top !important;
+}
+.fc .fc-timegrid-slot-label-cushion {
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  color: rgb(var(--text-3)) !important;
+  padding: 2px 8px 0 0 !important;
+  text-align: right !important;
+  line-height: 1 !important;
+  user-select: none !important;
+}
+.fc .fc-timegrid-axis-cushion {
+  font-size: 10px !important;
+  color: rgb(var(--text-3)) !important;
+}
+
+/* Slot height: 28px per 30 min = 56px/hour */
+.fc .fc-timegrid-slot { height: 28px !important; }
+
+/* Events — flat solid, minimal */
+.fc .fc-event {
+  border: none !important;
+  border-radius: 5px !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  box-shadow: none !important;
+  transition: filter 100ms !important;
+}
+.fc .fc-event:hover { filter: brightness(0.88) !important; }
+
+.fc .fc-timegrid-event            { border-radius: 5px !important; margin: 1px 2px !important; }
+.fc .fc-timegrid-event .fc-event-main { padding: 3px 6px !important; }
+
+.fc .fc-event-title {
+  font-weight: 500 !important;
+  font-size: 11px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+.fc .fc-event-time {
+  font-size: 10px !important;
+  font-weight: 400 !important;
+  opacity: 0.85 !important;
+}
+
+/* Now indicator: red line + filled circle dot */
+.fc .fc-timegrid-now-indicator-line {
+  border-color: #f44336 !important;
+  border-width: 2px !important;
+  z-index: 10 !important;
+}
+.fc .fc-timegrid-now-indicator-arrow {
+  border: none !important;
+  width: 9px !important;
+  height: 9px !important;
+  border-radius: 50% !important;
+  background: #f44336 !important;
+  margin-top: -4px !important;
+  margin-left: 1px !important;
+}
+
+/* Popover */
+.fc .fc-popover {
+  background: rgb(var(--surface)) !important;
+  border: 1px solid rgb(var(--border)) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.12) !important;
+}
+.fc .fc-popover-header {
+  background: rgb(var(--surface-2)) !important;
+  border-radius: 12px 12px 0 0 !important;
+  padding: 8px 12px !important;
+  font-size: 0.8rem !important;
+  font-weight: 600;
+  color: rgb(var(--text));
+}
+.fc .fc-popover-close { color: rgb(var(--text-2)) !important; opacity: 1 !important; }
+.fc .fc-more-link     { color: #6366f1 !important; font-size: 0.75rem !important; font-weight: 500; }

@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(@\\(\"C:\\\\Program Files\\\\nodejs\", \"C:\\\\Program Files \\(x86\\)\\\\nodejs\", \"$env:APPDATA\\\\npm\", \"$env:LOCALAPPDATA\\\\Programs\\\\nodejs\"\\) | ForEach-Object { if \\(Test-Path $_\\) { \"FOUND: $_\" } else { \"NOT: $_\" } })"
+    ]
+  }
+}
