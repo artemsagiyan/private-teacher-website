@@ -19,6 +19,7 @@ import { BookingsModule } from './bookings/bookings.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { SeedModule } from './seed/seed.module';
+import { VideoModule } from './video/video.module';
 
 @Module({
   imports: [
@@ -50,6 +51,7 @@ import { SeedModule } from './seed/seed.module';
     NotificationsModule,
     AdminModule,
     SeedModule,
+    VideoModule,
   ],
 })
 export class AppModule {}

@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { BookOpen, X, Clock, Calendar, Repeat } from 'lucide-react';
+import { BookOpen, X, Clock, Calendar, Repeat, Video } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Booking } from '@/types';
 import { formatDateTime } from '@/lib/utils';
@@ -98,9 +99,13 @@ export default function StudentBookingsPage() {
 }
 
 function BookingRow({ booking, onCancel, showCancel }: { booking: Booking; onCancel?: (cancelSeries: boolean) => void; showCancel?: boolean }) {
+  const router = useRouter();
   const cfg = statusCfg[booking.status] ?? { label: booking.status, variant: 'secondary' };
   const canCancel = showCancel && booking.status === 'confirmed'
     && (new Date(booking.slot.startTime).getTime() - Date.now()) / 3600000 >= 24;
+
+  const minsUntil = (new Date(booking.slot.startTime).getTime() - Date.now()) / 60000;
+  const canJoin = booking.status === 'confirmed' && minsUntil <= 30 && minsUntil > -90;
 
   return (
     <div className={cn(
@@ -124,6 +129,15 @@ function BookingRow({ booking, onCancel, showCancel }: { booking: Booking; onCan
       </div>
       <div className="flex items-center gap-2">
         <Badge variant={cfg.variant} dot={booking.status === 'confirmed'}>{cfg.label}</Badge>
+        {canJoin && (
+          <button
+            onClick={() => router.push(`/dashboard/student/lesson/${booking.slotId}`)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-medium transition-colors"
+          >
+            <Video className="h-3.5 w-3.5" />
+            Войти
+          </button>
+        )}
         {canCancel && (
           <div className="flex gap-1">
             <button onClick={() => onCancel?.(false)} title="Отменить одно занятие" className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">

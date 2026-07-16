@@ -6,10 +6,11 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import ruLocale from '@fullcalendar/core/locales/ru';
 import { toast } from 'sonner';
-import { Plus, Clock, Users, Trash2, X, Repeat, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Clock, Users, Trash2, X, Repeat, ChevronLeft, ChevronRight, Video } from 'lucide-react';
 import { api } from '@/lib/api';
 import { CalendarSlot, LessonType } from '@/types';
 import { getSlotColor, formatDateTime } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -64,6 +65,7 @@ function generateTimeSlots(existing: CalendarSlot[], selectedDay: Date | null): 
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export default function TeacherCalendarPage() {
+  const router = useRouter();
   const [slots, setSlots]         = useState<CalendarSlot[]>([]);
   const [selected, setSelected]   = useState<CalendarSlot | null>(null);
   const [creating, setCreating]   = useState(false);
@@ -421,6 +423,20 @@ export default function TeacherCalendarPage() {
                   </Badge>
                   {selected.note && <p className="text-[rgb(var(--text-3))] text-xs">{selected.note}</p>}
                 </div>
+
+                {(() => {
+                  const minsUntil = (new Date(selected.startTime).getTime() - Date.now()) / 60000;
+                  const canJoin = minsUntil <= 30 && minsUntil > -90;
+                  return canJoin ? (
+                    <Button
+                      className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                      size="sm"
+                      onClick={() => router.push(`/dashboard/teacher/lesson/${selected.id}`)}
+                    >
+                      <Video className="h-3.5 w-3.5" /> Войти в урок
+                    </Button>
+                  ) : null;
+                })()}
 
                 {selected.status === 'available' && (
                   <div className="space-y-2 pt-1">

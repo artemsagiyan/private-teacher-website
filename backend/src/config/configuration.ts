@@ -27,4 +27,9 @@ export default () => ({
     pass: process.env.SMTP_PASS,
     from: process.env.SMTP_FROM || 'noreply@tutor-platform.com',
   },
+  livekit: {
+    apiKey: process.env.LIVEKIT_API_KEY || 'devkey',
+    apiSecret: process.env.LIVEKIT_API_SECRET || 'devsecret1234567890abcdef',
+    url: process.env.LIVEKIT_URL || 'ws://localhost:7880',
+  },
 });
