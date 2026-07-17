@@ -378,3 +378,47 @@
 .lesson-video-dock .lk-chat {
   display: none !important; /* too narrow for chat in dock */
 }
+
+.lesson-video-pip .lk-video-conference {
+  height: 100%;
+}
+
+.lesson-video-pip .lk-grid-layout {
+  grid-template-columns: 1fr !important;
+  gap: 4px !important;
+  padding: 4px !important;
+}
+
+.lesson-video-pip .lk-control-bar {
+  gap: 2px !important;
+  padding: 4px !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+  --lk-control-bar-height: 40px;
+}
+
+.lesson-video-pip .lk-button,
+.lesson-video-pip .lk-button-group {
+  font-size: 0 !important;
+  min-width: 32px !important;
+  padding-inline: 6px !important;
+}
+
+.lesson-video-pip .lk-chat {
+  display: none !important;
+}
+
+/* Lesson room fullscreen (board + controls) */
+.lesson-room:fullscreen,
+.lesson-room:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  background: rgb(var(--bg));
+}
+
+.lesson-stage:fullscreen,
+.lesson-stage:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+  background: rgb(var(--bg));
+}
