@@ -75,9 +75,26 @@ class ApiClient {
     return res.data;
   }
 
+  async put<T>(url: string, data?: unknown, config?: AxiosRequestConfig) {
+    const res = await this.client.put<T>(url, data, config);
+    return res.data;
+  }
+
   async delete<T>(url: string, config?: AxiosRequestConfig) {
     const res = await this.client.delete<T>(url, config);
     return res.data;
+  }
+
+  async download(url: string, filename: string) {
+    const res = await this.client.get<Blob>(url, { responseType: 'blob' });
+    const objectUrl = URL.createObjectURL(res.data);
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
   }
 
   // Auth

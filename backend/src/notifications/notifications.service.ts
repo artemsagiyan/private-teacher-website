@@ -80,6 +80,21 @@ export class NotificationsService {
     await this.create(teacherUserId, NotificationType.BOOKING_CONFIRMED, message);
   }
 
+  async notifyLessonReportReady(
+    userId: string,
+    lessonId: string,
+    startTime?: Date,
+  ) {
+    const when = startTime ? ` (${this.formatDate(startTime)})` : '';
+    const message = `Готов отчёт по уроку${when}`;
+    await this.create(
+      userId,
+      NotificationType.LESSON_REPORT_READY,
+      message,
+      lessonId,
+    );
+  }
+
   async sendReminder24h(userId: string, startTime: Date) {
     const message = `Напоминание: занятие завтра в ${this.formatDate(startTime)}`;
     await this.create(userId, NotificationType.REMINDER_24H, message);

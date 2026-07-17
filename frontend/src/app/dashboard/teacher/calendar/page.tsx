@@ -425,8 +425,13 @@ export default function TeacherCalendarPage() {
                 </div>
 
                 {(() => {
-                  const minsUntil = (new Date(selected.startTime).getTime() - Date.now()) / 60000;
-                  const canJoin = minsUntil <= 30 && minsUntil > -90;
+                  if (selected.status === 'cancelled') return null;
+                  const now = Date.now();
+                  const start = new Date(selected.startTime).getTime();
+                  const end = new Date(selected.endTime).getTime();
+                  // Match backend: early 30m before start, late 120m after end
+                  const canJoin =
+                    now >= start - 30 * 60_000 && now <= end + 120 * 60_000;
                   return canJoin ? (
                     <Button
                       className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"

@@ -1,4 +1,16 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: tutor_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
   postgres:
     image: postgres:16-alpine
     container_name: tutor_postgres
@@ -15,6 +27,39 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: tutor_minio
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: tutor
+      MINIO_ROOT_PASSWORD: tutor-secret
+    ports:
+      # Host 9000 is often taken (other stacks / WSL relay) — map to 9010/9011
+      - '9010:9000'
+      - '9011:9001'
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: tutor_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >
+        mc alias set tutor http://minio:9000 tutor tutor-secret &&
+        mc mb --ignore-existing tutor/tutor-files
+    restart: 'no'
 
   backend:
     build:
@@ -46,6 +91,21 @@ services:
       LIVEKIT_API_KEY: devkey
       LIVEKIT_API_SECRET: devsecret1234567890abcdef
       LIVEKIT_URL: ws://livekit:7880
+      LESSON_EMPTY_TIMEOUT_SECONDS: 1800
+      LESSON_JOIN_EARLY_MINUTES: 30
+      LESSON_JOIN_LATE_MINUTES: 120
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_USE_SSL: 'false'
+      MINIO_ACCESS_KEY: tutor
+      MINIO_SECRET_KEY: tutor-secret
+      MINIO_BUCKET: tutor-files
+      MINIO_REGION: us-east-1
+      MINIO_EGRESS_ENDPOINT: http://minio:9000
+      TRANSCRIBER_URL: http://transcriber:8000
+      TRANSCRIBER_LANGUAGE: ru
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: qwen3:8b
     ports:
       - '3001:3001'
     volumes:
@@ -53,6 +113,10 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      livekit:
+        condition: service_started
 
   frontend:
     build:
@@ -79,9 +143,91 @@ services:
       - '7880:7880'
       - '7881:7881'
       - '7882:7882/udp'
-    command: --dev --bind 0.0.0.0
+    command: --config /etc/livekit.yaml --bind 0.0.0.0
+    volumes:
+      - ./infra/livekit.yaml:/etc/livekit.yaml:ro
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  egress:
+    image: livekit/egress:latest
+    container_name: tutor_egress
     environment:
-      LIVEKIT_KEYS: 'devkey: devsecret1234567890abcdef'
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./infra/egress.yaml:/etc/egress.yaml:ro
+      - egress_backup:/out
+    shm_size: '1gb'
+    cap_add:
+      - SYS_ADMIN
+    depends_on:
+      redis:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  transcriber:
+    build:
+      context: ./services/transcriber
+    container_name: tutor_transcriber
+    environment:
+      WHISPER_MODEL: large-v3-turbo
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE_TYPE: int8
+      HF_HOME: /models
+    expose:
+      - '8000'
+    volumes:
+      - whisper_models:/models
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'python',
+          '-c',
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: tutor_ollama
+    ports:
+      - '11434:11434'
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: tutor_ollama_pull
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - ollama pull qwen3:8b
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: 'no'
 
 volumes:
   postgres_data:
+  redis_data:
+  minio_data:
+  egress_backup:
+  whisper_models:
+  ollama_data:

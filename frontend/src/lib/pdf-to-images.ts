@@ -20,8 +20,11 @@ export function isPdfFile(file: File): boolean {
 export async function pdfFileToImages(file: File): Promise<PdfPageImage[]> {
   const pdfjs = await import('pdfjs-dist');
 
-  // Worker from CDN — works in Next.js without webpack worker hacks
-  pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+  // Bundle the worker locally so PDF import also works without internet.
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url,
+  ).toString();
 
   const data = new Uint8Array(await file.arrayBuffer());
   const pdf = await pdfjs.getDocument({ data }).promise;

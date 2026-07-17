@@ -104,8 +104,14 @@ function BookingRow({ booking, onCancel, showCancel }: { booking: Booking; onCan
   const canCancel = showCancel && booking.status === 'confirmed'
     && (new Date(booking.slot.startTime).getTime() - Date.now()) / 3600000 >= 24;
 
-  const minsUntil = (new Date(booking.slot.startTime).getTime() - Date.now()) / 60000;
-  const canJoin = booking.status === 'confirmed' && minsUntil <= 30 && minsUntil > -90;
+  const now = Date.now();
+  const start = new Date(booking.slot.startTime).getTime();
+  const end = new Date(booking.slot.endTime).getTime();
+  // Match backend: early 30m before start, late 120m after end
+  const canJoin =
+    booking.status === 'confirmed' &&
+    now >= start - 30 * 60_000 &&
+    now <= end + 120 * 60_000;
 
   return (
     <div className={cn(

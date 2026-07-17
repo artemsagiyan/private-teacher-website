@@ -74,7 +74,8 @@ export type NotificationType =
   | 'schedule_changed'
   | 'reminder_24h'
   | 'reminder_1h'
-  | 'teacher_invitation';
+  | 'teacher_invitation'
+  | 'lesson_report_ready';
 
 export interface Notification {
   id: string;
@@ -97,4 +98,49 @@ export interface PaginatedResponse<T> {
   total: number;
   page: number;
   limit: number;
+}
+
+export type LessonStatus =
+  | 'waiting'
+  | 'starting'
+  | 'active'
+  | 'ending'
+  | 'processing'
+  | 'completed'
+  | 'failed';
+
+export interface LessonReport {
+  summary: string;
+  topics: string[];
+  achievements: string[];
+  difficulties: string[];
+  homework: string[];
+  recommendations: string[];
+  keyMoments: Array<{ time?: string; description: string }>;
+}
+
+export interface LessonRecord {
+  id: string;
+  slotId: string;
+  roomName: string;
+  status: LessonStatus;
+  participantCount: number;
+  startedAt?: string;
+  endedAt?: string;
+  endReason?: 'teacher' | 'empty_room' | 'room_finished' | 'system';
+  boardUpdatedAt?: string;
+  boardRevision?: number;
+  transcriptLanguage?: string;
+  transcriptDurationSeconds?: number;
+  processingError?: string;
+  createdAt: string;
+  slot: CalendarSlot;
+  teacher?: Teacher;
+  report?: LessonReport | { summary: string } | null;
+  files: {
+    board: boolean;
+    recording: boolean;
+    transcript: boolean;
+    report: boolean;
+  };
 }

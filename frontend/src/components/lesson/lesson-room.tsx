@@ -14,9 +14,11 @@ import {
 import '@livekit/components-styles';
 import '@excalidraw/excalidraw/index.css';
 import { Track } from 'livekit-client';
-import { ArrowLeft, Loader2, Video, PenLine, LayoutPanelLeft, MonitorOff, PictureInPicture2, PanelRight, Maximize2, Minimize2 } from 'lucide-react';
+import { ArrowLeft, Loader2, Video, PenLine, LayoutPanelLeft, MonitorOff, PictureInPicture2, PanelRight, Maximize2, Minimize2, StopCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { isPdfFile, pdfFileToImages } from '@/lib/pdf-to-images';
+import { api } from '@/lib/api';
+import type { LessonStatus } from '@/types';
 
 const DOCK_DEFAULT = 280;
 const DOCK_MIN = 180;
@@ -24,7 +26,9 @@ const DOCK_MAX_RATIO = 0.75;
 const DOCK_COMPACT = 240;
 const PIP_W = 300;
 const PIP_H = 220;
-const WB_FILE_SYNC_MAX = 350_000;
+const WB_FILE_SYNC_MAX = 8_000;
+/** LiveKit data messages are capped (~15KB); stay under that. */
+const WB_PAYLOAD_MAX = 14_000;
 
 // ─── Excalidraw: browser-only, no SSR ───────────────────────────────────────
 const ExcalidrawComponent = dynamic(
@@ -71,12 +75,34 @@ const ExcalidrawComponent = dynamic(
 
 // ─── Whiteboard with real-time sync via LiveKit data channel ─────────────────
 
-function WhiteboardPanel() {
+function WhiteboardPanel({
+  lessonId,
+  onRegisterFlush,
+}: {
+  lessonId: string;
+  onRegisterFlush?: (flush: (() => Promise<void>) | null) => void;
+}) {
   const apiRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const openInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipRef = useRef(false);
+  const boardLoadedRef = useRef(false);
+  const boardRevisionRef = useRef(0);
+  const clientIdRef = useRef(
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2),
+  );
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const latestSceneRef = useRef<{
+    elements: readonly any[];
+    appState: Record<string, any>;
+    files: Record<string, any>;
+    revision?: number;
+    clientId?: string;
+  } | null>(null);
   const enc = useRef(new TextEncoder());
   const dec = useRef(new TextDecoder());
   const panRef = useRef<{
@@ -87,6 +113,125 @@ function WhiteboardPanel() {
   } | null>(null);
   const importingRef = useRef(false);
 
+  const buildSnapshot = useCallback(
+    (
+      elements: readonly any[],
+      appState: Record<string, any>,
+      files: Record<string, any>,
+    ) => ({
+      elements: [...elements],
+      appState: {
+        viewBackgroundColor: appState?.viewBackgroundColor,
+        gridSize: appState?.gridSize,
+        gridStep: appState?.gridStep,
+        gridModeEnabled: appState?.gridModeEnabled,
+        scrollX: appState?.scrollX,
+        scrollY: appState?.scrollY,
+        zoom: appState?.zoom,
+      },
+      files: files || {},
+      revision: boardRevisionRef.current,
+      clientId: clientIdRef.current,
+    }),
+    [],
+  );
+
+  const mergeSnapshots = useCallback((remote: any, local: any) => {
+    const elements = new Map<string, any>();
+    for (const element of remote.elements || []) {
+      elements.set(element.id, element);
+    }
+    for (const element of local.elements || []) {
+      const previous = elements.get(element.id);
+      if (!previous || (element.version || 0) >= (previous.version || 0)) {
+        elements.set(element.id, element);
+      }
+    }
+    return {
+      ...local,
+      elements: Array.from(elements.values()),
+      files: { ...(remote.files || {}), ...(local.files || {}) },
+      revision: Number(remote.revision || 0),
+      clientId: clientIdRef.current,
+    };
+  }, []);
+
+  const saveSnapshot = useCallback(
+    async (original: any) => {
+      let snapshot = {
+        ...original,
+        revision: Number(
+          original.revision ?? boardRevisionRef.current,
+        ),
+        clientId: clientIdRef.current,
+      };
+      try {
+        const result = await api.put<{ revision: number }>(
+          `/lessons/${lessonId}/board`,
+          snapshot,
+        );
+        boardRevisionRef.current = result.revision;
+      } catch (error: any) {
+        if (error.response?.status !== 409) throw error;
+
+        const remote = await api.get<any>(`/lessons/${lessonId}/board`);
+        boardRevisionRef.current = Number(remote.revision || 0);
+        snapshot = mergeSnapshots(remote, snapshot);
+        snapshot.revision = boardRevisionRef.current;
+
+        const result = await api.put<{ revision: number }>(
+          `/lessons/${lessonId}/board`,
+          snapshot,
+        );
+        boardRevisionRef.current = result.revision;
+
+        const excalidrawApi = apiRef.current;
+        if (excalidrawApi) {
+          const missingFiles = Object.values(snapshot.files || {});
+          if (missingFiles.length) excalidrawApi.addFiles(missingFiles);
+          skipRef.current = true;
+          excalidrawApi.updateScene({
+            elements: snapshot.elements,
+            captureUpdate: 'NEVER',
+          });
+        }
+      }
+    },
+    [lessonId, mergeSnapshots],
+  );
+
+  const enqueueSave = useCallback(
+    (snapshot: any) => {
+      saveQueueRef.current = saveQueueRef.current
+        .catch(() => undefined)
+        .then(() => saveSnapshot(snapshot));
+      return saveQueueRef.current;
+    },
+    [saveSnapshot],
+  );
+
+  const persistBoard = useCallback(
+    (
+      elements: readonly any[],
+      appState: Record<string, any>,
+      files: Record<string, any>,
+      immediately = false,
+    ) => {
+      const snapshot = buildSnapshot(elements, appState, files);
+      latestSceneRef.current = snapshot;
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+
+      const save = () => {
+        void enqueueSave(snapshot).catch((error) =>
+          console.warn('Не удалось сохранить доску', error),
+        );
+      };
+      if (immediately) save();
+      else saveTimerRef.current = setTimeout(save, 2_500);
+    },
+    [buildSnapshot, enqueueSave],
+  );
+
   const { send } = useDataChannel('wb', (msg) => {
     try {
       const payload = JSON.parse(dec.current.decode(msg.payload));
@@ -96,10 +241,30 @@ function WhiteboardPanel() {
         apiRef.current.addFiles(payload.files);
       }
       if (payload.elements) {
+        const localElements =
+          apiRef.current.getSceneElementsIncludingDeleted?.() ||
+          apiRef.current.getSceneElements();
+        const merged = mergeSnapshots(
+          {
+            elements: payload.elements,
+            files: Object.fromEntries(
+              (payload.files || []).map((file: any) => [file.id, file]),
+            ),
+          },
+          {
+            elements: localElements,
+            files: apiRef.current.getFiles(),
+          },
+        );
         apiRef.current.updateScene({
-          elements: payload.elements,
+          elements: merged.elements,
           captureUpdate: 'NEVER',
         });
+        persistBoard(
+          merged.elements,
+          apiRef.current.getAppState(),
+          merged.files,
+        );
       }
     } catch {
       /* ignore malformed */
@@ -110,26 +275,37 @@ function WhiteboardPanel() {
     (elements: readonly any[], files?: Record<string, any>) => {
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        try {
-          const fileList: any[] = [];
-          if (files) {
-            for (const f of Object.values(files)) {
-              const dataURL = (f as any)?.dataURL as string | undefined;
-              if (!dataURL || dataURL.length > WB_FILE_SYNC_MAX) continue;
-              fileList.push(f);
-            }
+        const fileList: any[] = [];
+        if (files) {
+          for (const f of Object.values(files)) {
+            const dataURL = (f as any)?.dataURL as string | undefined;
+            if (!dataURL || dataURL.length > WB_FILE_SYNC_MAX) continue;
+            fileList.push(f);
           }
-          send(
-            enc.current.encode(
-              JSON.stringify({
-                elements: [...elements],
-                files: fileList,
-              }),
-            ),
-            {},
-          );
+        }
+
+        const encode = (payload: { elements: any[]; files: any[] }) =>
+          enc.current.encode(JSON.stringify(payload));
+
+        let body = encode({
+          elements: [...elements],
+          files: fileList,
+        });
+        // Prefer elements-only if files push us over the LiveKit limit
+        if (body.byteLength > WB_PAYLOAD_MAX && fileList.length) {
+          body = encode({ elements: [...elements], files: [] });
+        }
+        if (body.byteLength > WB_PAYLOAD_MAX) {
+          return;
+        }
+
+        try {
+          const result = send(body, {});
+          void Promise.resolve(result).catch(() => {
+            /* room not ready / publish failed */
+          });
         } catch {
-          /* room not ready / payload too large */
+          /* room not ready */
         }
       }, 200);
     },
@@ -137,14 +313,135 @@ function WhiteboardPanel() {
   );
 
   const handleChange = useCallback(
-    (elements: readonly any[], _appState: any, files: Record<string, any>) => {
+    (elements: readonly any[], appState: any, files: Record<string, any>) => {
+      persistBoard(elements, appState, files);
       if (skipRef.current) {
         skipRef.current = false;
         return;
       }
       broadcast(elements, files);
     },
-    [broadcast],
+    [broadcast, persistBoard],
+  );
+
+  const loadSavedBoard = useCallback(
+    async (excalidrawApi: any) => {
+      if (boardLoadedRef.current) return;
+      boardLoadedRef.current = true;
+      try {
+        const scene = await api.get<{
+          elements?: any[];
+          appState?: Record<string, any>;
+          files?: Record<string, any>;
+          revision?: number;
+        }>(`/lessons/${lessonId}/board`);
+        boardRevisionRef.current = Number(scene.revision || 0);
+        if (scene.files && Object.keys(scene.files).length) {
+          excalidrawApi.addFiles(Object.values(scene.files));
+        }
+        if (scene.elements?.length || scene.appState) {
+          skipRef.current = true;
+          excalidrawApi.updateScene({
+            elements: scene.elements || [],
+            appState: scene.appState || {},
+            captureUpdate: 'NEVER',
+          });
+        }
+      } catch (error) {
+        boardLoadedRef.current = false;
+        console.warn('Не удалось загрузить сохранённую доску', error);
+      }
+    },
+    [lessonId],
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const mergeFromStorage = async () => {
+      const excalidrawApi = apiRef.current;
+      if (!excalidrawApi || !boardLoadedRef.current) return;
+      try {
+        const scene = await api.get<{
+          elements?: any[];
+          files?: Record<string, any>;
+          revision?: number;
+        }>(`/lessons/${lessonId}/board`);
+        if (cancelled) return;
+        boardRevisionRef.current = Math.max(
+          boardRevisionRef.current,
+          Number(scene.revision || 0),
+        );
+
+        const localFiles = excalidrawApi.getFiles() || {};
+        const missingFiles = Object.values(scene.files || {}).filter(
+          (file: any) => !localFiles[file.id],
+        );
+        if (missingFiles.length) excalidrawApi.addFiles(missingFiles);
+
+        const localElements =
+          excalidrawApi.getSceneElementsIncludingDeleted?.() ||
+          excalidrawApi.getSceneElements();
+        const merged = new Map<string, any>(
+          localElements.map((element: any) => [element.id, element]),
+        );
+        let changed = false;
+
+        for (const remote of scene.elements || []) {
+          const local = merged.get(remote.id);
+          if (!local || (remote.version || 0) > (local.version || 0)) {
+            merged.set(remote.id, remote);
+            changed = true;
+          }
+        }
+
+        if (changed) {
+          skipRef.current = true;
+          excalidrawApi.updateScene({
+            elements: Array.from(merged.values()),
+            captureUpdate: 'NEVER',
+          });
+        }
+      } catch {
+        // Autosave may briefly be unavailable; retry on the next interval.
+      }
+    };
+
+    const interval = window.setInterval(mergeFromStorage, 5_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [lessonId]);
+
+  const flushBoard = useCallback(async () => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    const excalidrawApi = apiRef.current;
+    if (!excalidrawApi) return;
+    const snapshot = buildSnapshot(
+      excalidrawApi.getSceneElementsIncludingDeleted?.() ||
+        excalidrawApi.getSceneElements(),
+      excalidrawApi.getAppState(),
+      excalidrawApi.getFiles(),
+    );
+    latestSceneRef.current = snapshot;
+    await enqueueSave(snapshot);
+  }, [buildSnapshot, enqueueSave]);
+
+  useEffect(() => {
+    onRegisterFlush?.(flushBoard);
+    return () => onRegisterFlush?.(null);
+  }, [flushBoard, onRegisterFlush]);
+
+  useEffect(
+    () => () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      const latest = latestSceneRef.current;
+      if (latest) {
+        void enqueueSave(latest);
+      }
+    },
+    [enqueueSave],
   );
 
   const insertPdfAsImages = useCallback(
@@ -540,6 +837,7 @@ function WhiteboardPanel() {
         langCode="ru-RU"
         excalidrawAPI={(api: any) => {
           apiRef.current = api;
+          void loadSavedBoard(api);
         }}
         onChange={handleChange}
         onRequestOpenFile={onRequestOpenFile}
@@ -579,9 +877,14 @@ function StopScreenShareButton() {
           await localParticipant.unpublishTrack(pub.track);
         }
       }
-      // Also stop browser MediaStreamTracks if still live
+      // Also stop only leftover screen-share MediaStreamTracks if still live.
       for (const pub of pubs) {
-        pub.track?.mediaStreamTrack?.stop();
+        if (
+          pub.source === Track.Source.ScreenShare ||
+          pub.source === Track.Source.ScreenShareAudio
+        ) {
+          pub.track?.mediaStreamTrack?.stop();
+        }
       }
     } catch (err) {
       console.error('Failed to stop screen share', err);
@@ -628,13 +931,61 @@ const VIEW_MODES: { mode: ViewMode; Icon: typeof Video; label: string }[] = [
 interface LessonRoomProps {
   token: string;
   livekitUrl: string;
+  lessonId: string;
+  initialStatus: LessonStatus;
+  isTeacher: boolean;
   backHref: string;
   title: string;
 }
 
-export function LessonRoom({ token, livekitUrl, backHref, title }: LessonRoomProps) {
+const LESSON_STATUS: Record<
+  LessonStatus,
+  { label: string; className: string }
+> = {
+  waiting: {
+    label: 'Ожидаем второго участника',
+    className: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+  },
+  starting: {
+    label: 'Запускаем запись…',
+    className: 'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+  },
+  active: {
+    label: 'Запись идёт',
+    className: 'bg-red-500/15 text-red-600 dark:text-red-300',
+  },
+  ending: {
+    label: 'Завершаем…',
+    className: 'bg-slate-500/15 text-slate-600 dark:text-slate-300',
+  },
+  processing: {
+    label: 'Готовим отчёт',
+    className: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-300',
+  },
+  completed: {
+    label: 'Урок завершён',
+    className: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
+  },
+  failed: {
+    label: 'Ошибка обработки',
+    className: 'bg-red-500/15 text-red-600 dark:text-red-300',
+  },
+};
+
+export function LessonRoom({
+  token,
+  livekitUrl,
+  lessonId,
+  initialStatus,
+  isTeacher,
+  backHref,
+  title,
+}: LessonRoomProps) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<ViewMode>('split');
+  const [lessonStatus, setLessonStatus] =
+    useState<LessonStatus>(initialStatus);
+  const [endingLesson, setEndingLesson] = useState(false);
   const [dockWidth, setDockWidth] = useState(DOCK_DEFAULT);
   const [dragging, setDragging] = useState(false);
   const [pip, setPip] = useState(false);
@@ -643,8 +994,60 @@ export function LessonRoom({ token, livekitUrl, backHref, title }: LessonRoomPro
   const [isFullscreen, setIsFullscreen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const boardFlushRef = useRef<(() => Promise<void>) | null>(null);
   const dockWidthRef = useRef(dockWidth);
   const pipDragOffset = useRef({ x: 0, y: 0 });
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const status = await api.get<{ status: LessonStatus }>(
+          `/lessons/${lessonId}/status`,
+        );
+        if (!cancelled) setLessonStatus(status.status);
+      } catch {
+        // LiveKit reconnects and token errors are handled elsewhere.
+      }
+    };
+    void refresh();
+    const interval = window.setInterval(refresh, 5_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [lessonId]);
+
+  const endLesson = useCallback(async () => {
+    if (
+      !window.confirm(
+        'Завершить урок для всех? После этого начнётся подготовка транскрипта и отчёта.',
+      )
+    ) {
+      return;
+    }
+    setEndingLesson(true);
+    try {
+      await boardFlushRef.current?.();
+      await api.post(`/lessons/${lessonId}/end`);
+      setLessonStatus('processing');
+      toast.success('Урок завершён. Отчёт будет готов после обработки.');
+      router.push(backHref);
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message ||
+          'Не удалось сохранить доску и завершить урок',
+      );
+      setEndingLesson(false);
+    }
+  }, [backHref, lessonId, router]);
+
+  const registerBoardFlush = useCallback(
+    (flush: (() => Promise<void>) | null) => {
+      boardFlushRef.current = flush;
+    },
+    [],
+  );
 
   useEffect(() => {
     dockWidthRef.current = dockWidth;
@@ -830,9 +1233,43 @@ export function LessonRoom({ token, livekitUrl, backHref, title }: LessonRoomPro
             <ArrowLeft className="h-4 w-4" />
             Назад
           </button>
-          <span className="text-sm font-medium text-[rgb(var(--text))] flex-1 truncate">{title}</span>
+          <span className="text-sm font-medium text-[rgb(var(--text))] truncate">
+            {title}
+          </span>
+          <span
+            className={[
+              'flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium',
+              LESSON_STATUS[lessonStatus].className,
+            ].join(' ')}
+          >
+            {lessonStatus === 'active' && (
+              <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />
+            )}
+            {LESSON_STATUS[lessonStatus].label}
+          </span>
+          <span className="flex-1" />
 
           <StopScreenShareButton />
+
+          {isTeacher &&
+            !['completed', 'failed', 'processing', 'ending'].includes(
+              lessonStatus,
+            ) && (
+              <button
+                type="button"
+                onClick={endLesson}
+                disabled={endingLesson}
+                className="flex items-center gap-1.5 rounded-md bg-red-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-60"
+                title="Завершить урок для всех"
+              >
+                {endingLesson ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <StopCircle className="h-3.5 w-3.5" />
+                )}
+                <span className="hidden lg:inline">Завершить урок</span>
+              </button>
+            )}
 
           <button
             type="button"
@@ -909,7 +1346,10 @@ export function LessonRoom({ token, livekitUrl, backHref, title }: LessonRoomPro
               right: showDock ? dockWidth : 0,
             }}
           >
-            <WhiteboardPanel />
+            <WhiteboardPanel
+              lessonId={lessonId}
+              onRegisterFlush={registerBoardFlush}
+            />
           </div>
 
           {/* Resize handle */}

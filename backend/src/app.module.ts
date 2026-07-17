@@ -20,6 +20,9 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { AdminModule } from './admin/admin.module';
 import { SeedModule } from './seed/seed.module';
 import { VideoModule } from './video/video.module';
+import { Lesson } from './lessons/entities/lesson.entity';
+import { LessonsModule } from './lessons/lessons.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
@@ -36,7 +39,16 @@ import { VideoModule } from './video/video.module';
         username: config.get<string>('database.user'),
         password: config.get<string>('database.password'),
         database: config.get<string>('database.name'),
-        entities: [User, Teacher, Student, CalendarSlot, Booking, Notification, RegistrationCode],
+        entities: [
+          User,
+          Teacher,
+          Student,
+          CalendarSlot,
+          Booking,
+          Notification,
+          RegistrationCode,
+          Lesson,
+        ],
         synchronize: config.get<string>('nodeEnv') !== 'production',
         logging: config.get<string>('nodeEnv') === 'development',
       }),
@@ -51,6 +63,8 @@ import { VideoModule } from './video/video.module';
     NotificationsModule,
     AdminModule,
     SeedModule,
+    StorageModule,
+    LessonsModule,
     VideoModule,
   ],
 })

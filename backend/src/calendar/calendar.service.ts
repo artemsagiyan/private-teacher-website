@@ -4,11 +4,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { CalendarSlot, SlotStatus } from './entities/calendar-slot.entity';
 import { Teacher } from '../teachers/entities/teacher.entity';
 import { Student } from '../students/entities/student.entity';
+import { Booking, BookingStatus } from '../bookings/entities/booking.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 import { CreateSlotDto } from './dto/create-slot.dto';
 
@@ -24,6 +25,8 @@ export class CalendarService {
     private teacherRepository: Repository<Teacher>,
     @InjectRepository(Student)
     private studentRepository: Repository<Student>,
+    @InjectRepository(Booking)
+    private bookingRepository: Repository<Booking>,
     private notificationsService: NotificationsService,
   ) {}
 
@@ -103,7 +106,20 @@ export class CalendarService {
     for (const s of slotsToCancel) {
       s.status = SlotStatus.CANCELLED;
       await this.slotRepository.save(s);
-      for (const booking of s.bookings ?? []) {
+
+      const confirmedBookings = (s.bookings ?? []).filter(
+        (b) => b.status === BookingStatus.CONFIRMED,
+      );
+
+      await this.bookingRepository.update(
+        {
+          slotId: s.id,
+          status: In([BookingStatus.CONFIRMED]),
+        },
+        { status: BookingStatus.CANCELLED_BY_TEACHER },
+      );
+
+      for (const booking of confirmedBookings) {
         if (booking.student?.userId) {
           await this.notificationsService.notifyBookingCancelled(
             booking.student.userId,

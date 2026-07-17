@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Calendar, BookOpen, Users, Bell,
-  Settings, Shield, BarChart3, GraduationCap, ChevronRight,
+  Settings, Shield, BarChart3, GraduationCap, ChevronRight, History,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
@@ -13,6 +13,7 @@ const studentNav = [
   { href: '/dashboard/student',               label: 'Главная',          icon: LayoutDashboard },
   { href: '/dashboard/student/calendar',      label: 'Расписание',       icon: Calendar },
   { href: '/dashboard/student/bookings',      label: 'Мои занятия',      icon: BookOpen },
+  { href: '/dashboard/student/lessons',       label: 'История уроков',   icon: History },
   { href: '/dashboard/student/teacher',       label: 'Мой преподаватель', icon: Users },
   { href: '/dashboard/student/notifications', label: 'Уведомления',      icon: Bell },
   { href: '/dashboard/student/profile',       label: 'Профиль',          icon: Settings },
@@ -21,6 +22,7 @@ const studentNav = [
 const teacherNav = [
   { href: '/dashboard/teacher',               label: 'Главная',    icon: LayoutDashboard },
   { href: '/dashboard/teacher/calendar',      label: 'Расписание', icon: Calendar },
+  { href: '/dashboard/teacher/lessons',       label: 'История уроков', icon: History },
   { href: '/dashboard/teacher/students',      label: 'Ученики',    icon: Users },
   { href: '/dashboard/teacher/notifications', label: 'Уведомления', icon: Bell },
   { href: '/dashboard/teacher/profile',       label: 'Настройки',  icon: Settings },

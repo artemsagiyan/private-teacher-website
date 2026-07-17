@@ -39,6 +39,8 @@ coverage/
 .npm/
 *.swp
 *.swo
+__pycache__/
+*.py[cod]
 
 # OS
 .DS_Store

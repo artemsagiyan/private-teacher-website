@@ -31,5 +31,27 @@ export default () => ({
     apiKey: process.env.LIVEKIT_API_KEY || 'devkey',
     apiSecret: process.env.LIVEKIT_API_SECRET || 'devsecret1234567890abcdef',
     url: process.env.LIVEKIT_URL || 'ws://localhost:7880',
+    roomEmptyTimeoutSeconds: parseInt(process.env.LESSON_EMPTY_TIMEOUT_SECONDS, 10) || 1800,
+    joinEarlyMinutes: parseInt(process.env.LESSON_JOIN_EARLY_MINUTES, 10) || 30,
+    joinLateMinutes: parseInt(process.env.LESSON_JOIN_LATE_MINUTES, 10) || 120,
+  },
+  storage: {
+    endPoint: process.env.MINIO_ENDPOINT || 'localhost',
+    port: parseInt(process.env.MINIO_PORT, 10) || 9000,
+    useSSL: process.env.MINIO_USE_SSL === 'true',
+    accessKey: process.env.MINIO_ACCESS_KEY || 'tutor',
+    secretKey: process.env.MINIO_SECRET_KEY || 'tutor-secret',
+    bucket: process.env.MINIO_BUCKET || 'tutor-files',
+    region: process.env.MINIO_REGION || 'us-east-1',
+    egressEndpoint:
+      process.env.MINIO_EGRESS_ENDPOINT || 'http://localhost:9000',
+  },
+  transcription: {
+    url: process.env.TRANSCRIBER_URL || 'http://localhost:8000',
+    language: process.env.TRANSCRIBER_LANGUAGE || 'ru',
+  },
+  ollama: {
+    url: process.env.OLLAMA_URL || 'http://localhost:11434',
+    model: process.env.OLLAMA_MODEL || 'qwen3:8b',
   },
 });

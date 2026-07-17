@@ -414,6 +414,11 @@
   width: 100% !important;
 }
 
+.saved-lesson-board .excalidraw {
+  height: 100% !important;
+  width: 100% !important;
+}
+
 /* Collapse left tool/settings panel (second click on active tool) */
 .lesson-whiteboard.wb-panel-collapsed .App-menu__left,
 .lesson-whiteboard.wb-panel-collapsed .selected-shape-actions {

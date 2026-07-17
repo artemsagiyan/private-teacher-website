@@ -14,6 +14,7 @@ const typeIcon: Record<string, { icon: any; iconClass: string }> = {
   reminder_24h:        { icon: Calendar,  iconClass: 'icon-blue' },
   reminder_1h:         { icon: Calendar,  iconClass: 'icon-orange' },
   teacher_invitation:  { icon: Bell,      iconClass: 'icon-violet' },
+  lesson_report_ready: { icon: BookOpen,  iconClass: 'icon-green' },
 };
 
 export default function NotificationsPage() {

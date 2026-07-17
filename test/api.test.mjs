@@ -213,8 +213,8 @@ async function testStudents() {
 async function testCalendar() {
   section('CALENDAR');
 
-  const start = new Date(Date.now() + 24 * 3600 * 1000);
-  start.setMinutes(0, 0, 0);
+  const start = new Date(Date.now() + 20 * 60 * 1000);
+  start.setSeconds(0, 0);
   const end = new Date(start.getTime() + 60 * 60 * 1000);
 
   await test('POST /calendar/slots — создать слот', async () => {
@@ -309,6 +309,49 @@ async function testNotifications() {
   });
 }
 
+async function testLessons() {
+  section('LESSONS');
+
+  await test('GET /video/token — возвращает lessonId', async () => {
+    const { status, data } = await req(
+      'GET',
+      `/video/token?slotId=${tokens.slotId}`,
+      null,
+      tokens.teacher,
+    );
+    expect(status).toBe(200);
+    expect(data).toContain('lessonId');
+    expect(data).toContain('lessonStatus');
+    tokens.lessonId = data.lessonId;
+  });
+
+  await test('GET /lessons — история ученика', async () => {
+    const { status, data } = await req('GET', '/lessons', null, tokens.student);
+    expect(status).toBe(200);
+    expect(data).toBeArray();
+  });
+
+  await test('PUT /lessons/:id/board — автосохранение доски', async () => {
+    const { status } = await req(
+      'PUT',
+      `/lessons/${tokens.lessonId}/board`,
+      { elements: [], appState: {}, files: {} },
+      tokens.teacher,
+    );
+    expect(status).toBe(200);
+  });
+
+  await test('POST /lessons/:id/end — ученик не может завершить → 403', async () => {
+    const { status } = await req(
+      'POST',
+      `/lessons/${tokens.lessonId}/end`,
+      null,
+      tokens.student,
+    );
+    expect(status).toBe(403);
+  });
+}
+
 async function testAdmin() {
   section('ADMIN');
 
@@ -379,6 +422,7 @@ async function main() {
   await testStudents();
   await testCalendar();
   await testBookings();
+  await testLessons();
   await testNotifications();
   await testAdmin();
 

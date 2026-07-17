@@ -15,6 +15,7 @@ export enum NotificationType {
   REMINDER_24H = 'reminder_24h',
   REMINDER_1H = 'reminder_1h',
   TEACHER_INVITATION = 'teacher_invitation',
+  LESSON_REPORT_READY = 'lesson_report_ready',
 }
 
 @Entity('notifications')
