@@ -323,3 +323,58 @@
 }
 .fc .fc-popover-close { color: rgb(var(--text-2)) !important; opacity: 1 !important; }
 .fc .fc-more-link     { color: #6366f1 !important; font-size: 0.75rem !important; font-weight: 500; }
+
+/* Lesson room: narrow video dock beside whiteboard */
+.lesson-video-dock {
+  --lk-control-bar-height: 52px;
+}
+
+.lesson-video-dock .lk-video-conference {
+  height: 100%;
+}
+
+.lesson-video-dock .lk-grid-layout {
+  grid-template-columns: 1fr !important;
+  gap: 6px !important;
+  padding: 8px !important;
+}
+
+.lesson-video-dock .lk-focus-layout,
+.lesson-video-dock .lk-focus-layout-container {
+  flex-direction: column !important;
+}
+
+.lesson-video-dock .lk-carousel {
+  flex-direction: column !important;
+  width: 100% !important;
+  max-height: 40% !important;
+}
+
+.lesson-video-dock .lk-participant-tile {
+  border-radius: 10px !important;
+  aspect-ratio: 4 / 3;
+  max-height: none;
+}
+
+.lesson-video-dock .lk-control-bar {
+  gap: 4px !important;
+  padding: 6px 8px !important;
+  flex-wrap: wrap !important;
+  justify-content: center !important;
+}
+
+.lesson-video-dock .lk-button,
+.lesson-video-dock .lk-button-group {
+  font-size: 0 !important; /* hide labels, keep icons */
+  min-width: 36px !important;
+  padding-inline: 8px !important;
+}
+
+.lesson-video-dock .lk-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.lesson-video-dock .lk-chat {
+  display: none !important; /* too narrow for chat in dock */
+}
