@@ -414,6 +414,12 @@
   width: 100% !important;
 }
 
+/* Collapse left tool/settings panel (second click on active tool) */
+.lesson-whiteboard.wb-panel-collapsed .App-menu__left,
+.lesson-whiteboard.wb-panel-collapsed .selected-shape-actions {
+  display: none !important;
+}
+
 .lesson-room:fullscreen,
 .lesson-room:-webkit-full-screen {
   width: 100vw;

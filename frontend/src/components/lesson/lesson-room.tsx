@@ -356,6 +356,63 @@ function WhiteboardPanel() {
     };
   }, [importFiles]);
 
+  // Second click on the same toolbar tool collapses the left settings panel
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const resolveToolKey = (target: HTMLElement): string | null => {
+      const testIdBtn = target.closest('[data-testid^="toolbar-"]') as HTMLElement | null;
+      if (testIdBtn && el.contains(testIdBtn)) {
+        const id = (testIdBtn.getAttribute('data-testid') || '').replace(/^toolbar-/i, '').toLowerCase();
+        if (id === 'laserpointer') return 'laser';
+        if (id && !['container', 'content', 'lock'].includes(id)) return id;
+      }
+
+      const label = target.closest('label.ToolIcon') as HTMLLabelElement | null;
+      if (label && el.contains(label)) {
+        const input = label.querySelector('input') as HTMLInputElement | null;
+        const value = input?.value?.toLowerCase();
+        if (value) return value;
+      }
+
+      return null;
+    };
+
+    const onClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target || !el.contains(target)) return;
+      if (!target.closest('.App-toolbar, .App-toolbar-container')) return;
+
+      const toolKey = resolveToolKey(target);
+      if (!toolKey) return;
+
+      const api = apiRef.current;
+      if (!api) return;
+
+      const activeBefore = String(api.getAppState().activeTool?.type || '').toLowerCase();
+      const handOnBefore = !!el.querySelector('[data-testid="toolbar-hand"] input:checked');
+      const wasActive =
+        activeBefore === toolKey ||
+        (toolKey === 'hand' && (activeBefore === 'hand' || handOnBefore));
+
+      if (wasActive) {
+        el.classList.toggle('wb-panel-collapsed');
+        if (el.classList.contains('wb-panel-collapsed')) {
+          api.updateScene({
+            appState: { openMenu: null },
+            captureUpdate: 'NEVER',
+          });
+        }
+      } else {
+        el.classList.remove('wb-panel-collapsed');
+      }
+    };
+
+    el.addEventListener('click', onClick, true);
+    return () => el.removeEventListener('click', onClick, true);
+  }, []);
+
   // Wheel zoom without Ctrl + RMB pan without context menu popup
   useEffect(() => {
     const el = containerRef.current;
