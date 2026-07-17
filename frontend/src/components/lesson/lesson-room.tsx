@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import {
@@ -15,17 +15,50 @@ import '@livekit/components-styles';
 import '@excalidraw/excalidraw/index.css';
 import { Track } from 'livekit-client';
 import { ArrowLeft, Loader2, Video, PenLine, LayoutPanelLeft, MonitorOff, PictureInPicture2, PanelRight, Maximize2, Minimize2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { isPdfFile, pdfFileToImages } from '@/lib/pdf-to-images';
 
 const DOCK_DEFAULT = 280;
 const DOCK_MIN = 180;
-const DOCK_MAX_RATIO = 0.75; // video can take up to 75% of the stage
+const DOCK_MAX_RATIO = 0.75;
 const DOCK_COMPACT = 240;
 const PIP_W = 300;
 const PIP_H = 220;
+const WB_FILE_SYNC_MAX = 350_000;
 
 // ─── Excalidraw: browser-only, no SSR ───────────────────────────────────────
 const ExcalidrawComponent = dynamic(
-  () => import('@excalidraw/excalidraw').then((m) => ({ default: m.Excalidraw })),
+  () =>
+    import('@excalidraw/excalidraw').then((m) => {
+      function ExcalidrawWithOpen(props: Record<string, any>) {
+        const { onRequestOpenFile, ...rest } = props;
+        return (
+          <m.Excalidraw
+            {...rest}
+            UIOptions={{
+              ...rest.UIOptions,
+              canvasActions: {
+                ...rest.UIOptions?.canvasActions,
+                // Replace built-in loader (rejects PDF) with our handler via menu item
+                loadScene: false,
+              },
+            }}
+          >
+            <m.MainMenu>
+              <m.MainMenu.Item onSelect={() => onRequestOpenFile?.()}>
+                Открыть файл
+              </m.MainMenu.Item>
+              <m.MainMenu.DefaultItems.SaveToActiveFile />
+              <m.MainMenu.DefaultItems.Export />
+              <m.MainMenu.DefaultItems.SaveAsImage />
+              <m.MainMenu.DefaultItems.ClearCanvas />
+              <m.MainMenu.DefaultItems.ChangeCanvasBackground />
+            </m.MainMenu>
+          </m.Excalidraw>
+        );
+      }
+      return { default: ExcalidrawWithOpen };
+    }),
   {
     ssr: false,
     loading: () => (
@@ -41,6 +74,7 @@ const ExcalidrawComponent = dynamic(
 function WhiteboardPanel() {
   const apiRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const openInputRef = useRef<HTMLInputElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipRef = useRef(false);
   const enc = useRef(new TextEncoder());
@@ -51,71 +85,334 @@ function WhiteboardPanel() {
     lastY: number;
     moved: boolean;
   } | null>(null);
+  const importingRef = useRef(false);
 
   const { send } = useDataChannel('wb', (msg) => {
     try {
-      const { elements } = JSON.parse(dec.current.decode(msg.payload));
+      const payload = JSON.parse(dec.current.decode(msg.payload));
       if (!apiRef.current) return;
       skipRef.current = true;
-      apiRef.current.updateScene({ elements });
+      if (payload.files?.length) {
+        apiRef.current.addFiles(payload.files);
+      }
+      if (payload.elements) {
+        apiRef.current.updateScene({
+          elements: payload.elements,
+          captureUpdate: 'NEVER',
+        });
+      }
     } catch {
       /* ignore malformed */
     }
   });
 
-  const handleChange = useCallback(
-    (elements: readonly any[]) => {
-      if (skipRef.current) {
-        skipRef.current = false;
-        return;
-      }
+  const broadcast = useCallback(
+    (elements: readonly any[], files?: Record<string, any>) => {
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
         try {
-          send(enc.current.encode(JSON.stringify({ elements: [...elements] })), {});
+          const fileList: any[] = [];
+          if (files) {
+            for (const f of Object.values(files)) {
+              const dataURL = (f as any)?.dataURL as string | undefined;
+              if (!dataURL || dataURL.length > WB_FILE_SYNC_MAX) continue;
+              fileList.push(f);
+            }
+          }
+          send(
+            enc.current.encode(
+              JSON.stringify({
+                elements: [...elements],
+                files: fileList,
+              }),
+            ),
+            {},
+          );
         } catch {
-          /* room not ready */
+          /* room not ready / payload too large */
         }
-      }, 150);
+      }, 200);
     },
     [send],
   );
 
-  // Right-mouse drag to pan (Excalidraw has no built-in RMB pan)
+  const handleChange = useCallback(
+    (elements: readonly any[], _appState: any, files: Record<string, any>) => {
+      if (skipRef.current) {
+        skipRef.current = false;
+        return;
+      }
+      broadcast(elements, files);
+    },
+    [broadcast],
+  );
+
+  const insertPdfAsImages = useCallback(
+    async (file: File) => {
+      const api = apiRef.current;
+      if (!api) return;
+      const mod = await import('@excalidraw/excalidraw');
+      toast.message('Загрузка PDF…');
+      const pages = await pdfFileToImages(file);
+      const appState = api.getAppState();
+      const startX = -appState.scrollX + 40 / appState.zoom.value;
+      let y = -appState.scrollY + 40 / appState.zoom.value;
+      const gap = 24;
+      const maxW = 720;
+
+      const binaryFiles: any[] = [];
+      const skeletons: any[] = [];
+
+      for (const page of pages) {
+        const scale = Math.min(1, maxW / page.width);
+        const w = page.width * scale;
+        const h = page.height * scale;
+        const fileId = `pdf-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        binaryFiles.push({
+          id: fileId,
+          dataURL: page.dataURL,
+          mimeType: 'image/jpeg',
+          created: Date.now(),
+          lastRetrieved: Date.now(),
+        });
+        skeletons.push({
+          type: 'image',
+          fileId,
+          x: startX,
+          y,
+          width: w,
+          height: h,
+          status: 'saved',
+        });
+        y += h + gap;
+      }
+
+      api.addFiles(binaryFiles);
+      const imageElements = mod.convertToExcalidrawElements(skeletons as any);
+      const next = [...api.getSceneElements(), ...imageElements];
+      api.updateScene({ elements: next });
+      broadcast(next, api.getFiles());
+      toast.success(
+        pages.length === 1
+          ? 'PDF добавлен на доску'
+          : `PDF: ${pages.length} стр. добавлено на доску`,
+      );
+    },
+    [broadcast],
+  );
+
+  const loadSceneOrImage = useCallback(
+    async (file: File) => {
+      const api = apiRef.current;
+      if (!api) return;
+      const mod = await import('@excalidraw/excalidraw');
+
+      if (file.type.startsWith('image/') || /\.(png|jpe?g|gif|webp|svg|bmp)$/i.test(file.name)) {
+        // Try as Excalidraw scene embedded in PNG first
+        if (/\.excalidraw\.png$/i.test(file.name) || file.type === 'image/png') {
+          try {
+            const contents = await mod.loadFromBlob(file, api.getAppState(), api.getSceneElements());
+            api.updateScene({
+              elements: contents.elements,
+              appState: { ...(contents.appState || {}), collaborators: new Map() },
+            });
+            if (contents.files) api.addFiles(Object.values(contents.files));
+            broadcast(contents.elements, contents.files || api.getFiles());
+            toast.success('Сцена загружена');
+            return;
+          } catch {
+            /* plain image */
+          }
+        }
+
+        const fileId = `img-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+        const dataURL = await mod.getDataURL(file);
+        api.addFiles([
+          {
+            id: fileId,
+            dataURL,
+            mimeType: file.type || 'image/png',
+            created: Date.now(),
+            lastRetrieved: Date.now(),
+          },
+        ]);
+        const dims = await new Promise<{ w: number; h: number }>((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve({ w: img.naturalWidth || 400, h: img.naturalHeight || 300 });
+          img.onerror = () => resolve({ w: 400, h: 300 });
+          img.src = dataURL;
+        });
+        const appState = api.getAppState();
+        const maxW = Math.min(dims.w, 640);
+        const scale = maxW / dims.w;
+        const w = maxW;
+        const h = dims.h * scale;
+        const x = -appState.scrollX + appState.width / 2 / appState.zoom.value - w / 2;
+        const y = -appState.scrollY + appState.height / 2 / appState.zoom.value - h / 2;
+        const [el] = mod.convertToExcalidrawElements([
+          { type: 'image', fileId, x, y, width: w, height: h, status: 'saved' } as any,
+        ]);
+        const next = [...api.getSceneElements(), el];
+        api.updateScene({ elements: next });
+        broadcast(next, api.getFiles());
+        toast.success('Изображение добавлено');
+        return;
+      }
+
+      // .excalidraw / .json scene
+      const contents = await mod.loadFromBlob(file, api.getAppState(), api.getSceneElements());
+      api.updateScene({
+        elements: contents.elements,
+        appState: { ...(contents.appState || {}), collaborators: new Map() },
+      });
+      if (contents.files) api.addFiles(Object.values(contents.files));
+      broadcast(contents.elements, contents.files || api.getFiles());
+      toast.success('Сцена загружена');
+    },
+    [broadcast],
+  );
+
+  const importFiles = useCallback(
+    async (files: File[]) => {
+      if (!files.length || importingRef.current) return;
+      importingRef.current = true;
+      try {
+        for (const file of files) {
+          if (isPdfFile(file)) {
+            await insertPdfAsImages(file);
+          } else {
+            await loadSceneOrImage(file);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error(err instanceof Error ? err.message : 'Не удалось загрузить файл');
+      } finally {
+        importingRef.current = false;
+      }
+    },
+    [insertPdfAsImages, loadSceneOrImage],
+  );
+
+  const onRequestOpenFile = useCallback(() => {
+    openInputRef.current?.click();
+  }, []);
+
+  const onOpenInputChange = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const list = Array.from(e.target.files || []);
+      e.target.value = '';
+      await importFiles(list);
+    },
+    [importFiles],
+  );
+
+  // Intercept native Excalidraw PDF drops / file inputs so it doesn't throw "invalid file"
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
+    const onDragOver = (e: DragEvent) => {
+      const items = e.dataTransfer?.items;
+      if (!items) return;
+      const hasPdf = Array.from(items).some(
+        (it) => it.kind === 'file' && (it.type === 'application/pdf' || it.type === ''),
+      );
+      if (!hasPdf) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const onDrop = (e: DragEvent) => {
+      const files = Array.from(e.dataTransfer?.files || []);
+      const pdfs = files.filter(isPdfFile);
+      if (!pdfs.length) return;
+      e.preventDefault();
+      e.stopPropagation();
+      void importFiles(pdfs);
+    };
+
+    const onChangeCapture = (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      if (!(input instanceof HTMLInputElement) || input.type !== 'file') return;
+      if (input === openInputRef.current) return;
+      const files = Array.from(input.files || []);
+      const pdfs = files.filter(isPdfFile);
+      if (!pdfs.length) return;
+      // Stop Excalidraw from parsing PDF as a scene → "Error: invalid file"
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      input.value = '';
+      void importFiles(pdfs);
+    };
+
+    el.addEventListener('dragover', onDragOver, true);
+    el.addEventListener('drop', onDrop, true);
+    el.addEventListener('change', onChangeCapture, true);
+    return () => {
+      el.removeEventListener('dragover', onDragOver, true);
+      el.removeEventListener('drop', onDrop, true);
+      el.removeEventListener('change', onChangeCapture, true);
+    };
+  }, [importFiles]);
+
+  // Wheel zoom without Ctrl + RMB pan without context menu popup
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const isUiTarget = (target: EventTarget | null) => {
+      if (!(target instanceof Element)) return true;
+      return !!target.closest(
+        'input, textarea, button, a, label, select, .App-menu, .App-toolbar, .context-menu, .Stack, [class*="dropdown"], [class*="Dialog"], [class*="Island"]',
+      );
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      if (!el.contains(e.target as Node)) return;
+      if (isUiTarget(e.target)) return;
+      if (e.ctrlKey || e.metaKey) return;
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      const zoomEvent = new WheelEvent('wheel', {
+        deltaX: e.deltaX,
+        deltaY: e.deltaY,
+        deltaZ: e.deltaZ,
+        deltaMode: e.deltaMode,
+        clientX: e.clientX,
+        clientY: e.clientY,
+        screenX: e.screenX,
+        screenY: e.screenY,
+        ctrlKey: true,
+        bubbles: true,
+        cancelable: true,
+        view: window,
+      });
+      (e.target as EventTarget).dispatchEvent(zoomEvent);
+    };
+
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 2) return;
+      if (!el.contains(e.target as Node)) return;
+      if (isUiTarget(e.target)) return;
       if (!apiRef.current) return;
       e.preventDefault();
       e.stopPropagation();
-      panRef.current = {
-        active: true,
-        lastX: e.clientX,
-        lastY: e.clientY,
-        moved: false,
-      };
-      try {
-        el.setPointerCapture(e.pointerId);
-      } catch {
-        /* ignore */
-      }
+      panRef.current = { active: true, lastX: e.clientX, lastY: e.clientY, moved: false };
       apiRef.current.setCursor?.('grabbing');
+      el.querySelectorAll('.context-menu').forEach((node) => node.remove());
     };
 
     const onPointerMove = (e: PointerEvent) => {
       const pan = panRef.current;
       if (!pan?.active || !apiRef.current) return;
-      e.preventDefault();
-      e.stopPropagation();
       const dx = e.clientX - pan.lastX;
       const dy = e.clientY - pan.lastY;
-      if (Math.abs(dx) > 1 || Math.abs(dy) > 1) pan.moved = true;
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) pan.moved = true;
       pan.lastX = e.clientX;
       pan.lastY = e.clientY;
-
       const appState = apiRef.current.getAppState();
       const zoom = appState.zoom?.value ?? 1;
       apiRef.current.updateScene({
@@ -127,40 +424,42 @@ function WhiteboardPanel() {
       });
     };
 
-    const endPan = (e: PointerEvent) => {
+    const endPan = () => {
       if (!panRef.current?.active) return;
       panRef.current.active = false;
-      try {
-        el.releasePointerCapture(e.pointerId);
-      } catch {
-        /* ignore */
-      }
       apiRef.current?.resetCursor?.();
+      requestAnimationFrame(() => {
+        el.querySelectorAll('.context-menu').forEach((node) => node.remove());
+        document.querySelectorAll('.excalidraw .context-menu').forEach((node) => node.remove());
+      });
     };
 
     const onContextMenu = (e: Event) => {
+      if (!el.contains(e.target as Node)) return;
+      if (isUiTarget(e.target)) return;
       e.preventDefault();
       e.stopPropagation();
     };
 
     const refreshBoard = () => {
-      // Excalidraw needs a refresh after container size changes (e.g. fullscreen)
       requestAnimationFrame(() => apiRef.current?.refresh?.());
     };
 
+    el.addEventListener('wheel', onWheel, { capture: true, passive: false });
     el.addEventListener('pointerdown', onPointerDown, true);
-    el.addEventListener('pointermove', onPointerMove, true);
-    el.addEventListener('pointerup', endPan, true);
-    el.addEventListener('pointercancel', endPan, true);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', endPan);
+    window.addEventListener('pointercancel', endPan);
     el.addEventListener('contextmenu', onContextMenu, true);
     document.addEventListener('fullscreenchange', refreshBoard);
     window.addEventListener('resize', refreshBoard);
 
     return () => {
+      el.removeEventListener('wheel', onWheel, true);
       el.removeEventListener('pointerdown', onPointerDown, true);
-      el.removeEventListener('pointermove', onPointerMove, true);
-      el.removeEventListener('pointerup', endPan, true);
-      el.removeEventListener('pointercancel', endPan, true);
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', endPan);
+      window.removeEventListener('pointercancel', endPan);
       el.removeEventListener('contextmenu', onContextMenu, true);
       document.removeEventListener('fullscreenchange', refreshBoard);
       window.removeEventListener('resize', refreshBoard);
@@ -170,14 +469,29 @@ function WhiteboardPanel() {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full relative"
-      style={{ background: 'var(--color-surface)', cursor: panRef.current?.active ? 'grabbing' : undefined }}
+      className="w-full h-full relative lesson-whiteboard"
+      style={{ background: 'var(--color-surface)' }}
     >
+      <input
+        ref={openInputRef}
+        type="file"
+        className="hidden"
+        accept="application/pdf,.pdf,image/*,.excalidraw,.json,.excalidrawlib"
+        onChange={onOpenInputChange}
+      />
       <ExcalidrawComponent
+        langCode="ru-RU"
         excalidrawAPI={(api: any) => {
           apiRef.current = api;
         }}
-        onChange={(elements: readonly any[]) => handleChange(elements)}
+        onChange={handleChange}
+        onRequestOpenFile={onRequestOpenFile}
+        UIOptions={{
+          canvasActions: {
+            export: { saveFileToDisk: true },
+          },
+          tools: { image: true },
+        }}
       />
     </div>
   );

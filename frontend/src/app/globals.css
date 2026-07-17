@@ -408,7 +408,12 @@
   display: none !important;
 }
 
-/* Lesson room fullscreen (board + controls) */
+/* Excalidraw must fill its container */
+.lesson-whiteboard .excalidraw {
+  height: 100% !important;
+  width: 100% !important;
+}
+
 .lesson-room:fullscreen,
 .lesson-room:-webkit-full-screen {
   width: 100vw;
