@@ -47,6 +47,7 @@ export interface CalendarSlot {
   isRecurring: boolean;
   recurringGroupId?: string;
   createdAt: string;
+  teacher?: Teacher;
 }
 
 export type BookingStatus =

@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Calendar, BookOpen, Users, Clock, ArrowRight, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Calendar, BookOpen, Users, Clock, ArrowRight, Sparkles, Video } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { Booking, Teacher } from '@/types';
 import { formatDateTime, fullName } from '@/lib/utils';
+import { canJoinLesson, lessonTypeLabel } from '@/lib/lesson';
 
 export default function StudentDashboard() {
+  const router = useRouter();
   const [upcoming, setUpcoming] = useState<Booking[]>([]);
   const [teacher, setTeacher]   = useState<Teacher | null>(null);
   const [loading, setLoading]   = useState(true);
@@ -84,22 +87,37 @@ export default function StudentDashboard() {
             </div>
           ) : (
             <div className="space-y-2">
-              {upcoming.slice(0, 5).map((booking) => (
-                <div key={booking.id} className="flex items-center justify-between px-4 py-3 rounded-xl bg-[rgb(var(--surface-2))] hover:bg-[rgb(var(--border)/0.4)] transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg icon-blue flex items-center justify-center shrink-0">
-                      <Clock className="h-4 w-4 text-white" />
+              {upcoming.slice(0, 5).map((booking) => {
+                const join = canJoinLesson(booking.slot.startTime, booking.slot.endTime);
+                return (
+                  <div key={booking.id} className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[rgb(var(--surface-2))] hover:bg-[rgb(var(--border)/0.4)] transition-colors">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg icon-blue flex items-center justify-center shrink-0">
+                        <Clock className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[rgb(var(--text))]">{formatDateTime(booking.slot.startTime)}</p>
+                        <p className="text-xs text-[rgb(var(--text-2))]">
+                          {lessonTypeLabel(booking.slot.lessonType)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-medium text-[rgb(var(--text))]">{formatDateTime(booking.slot.startTime)}</p>
-                      <p className="text-xs text-[rgb(var(--text-2))]">
-                        {booking.slot.lessonType === 'individual' ? 'Индивидуальное' : 'Групповое'}
-                      </p>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {join ? (
+                        <Button
+                          size="sm"
+                          className="bg-emerald-500 text-white hover:bg-emerald-600"
+                          onClick={() => router.push(`/dashboard/student/lesson/${booking.slotId}`)}
+                        >
+                          <Video className="h-3.5 w-3.5" /> Войти
+                        </Button>
+                      ) : (
+                        <Badge variant="success" dot>Подтверждено</Badge>
+                      )}
                     </div>
                   </div>
-                  <Badge variant="success" dot>Подтверждено</Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

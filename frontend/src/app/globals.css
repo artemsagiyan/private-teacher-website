@@ -291,6 +291,9 @@
 }
 
 /* Now indicator: red line + filled circle dot */
+.fc .fc-highlight {
+  background: rgb(99 102 241 / 0.14) !important;
+}
 .fc .fc-timegrid-now-indicator-line {
   border-color: #f44336 !important;
   border-width: 2px !important;

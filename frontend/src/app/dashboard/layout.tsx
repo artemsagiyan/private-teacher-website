@@ -30,11 +30,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen flex bg-[rgb(var(--bg))]">
-      <DashboardSidebar />
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+    <div className="flex min-h-screen bg-[rgb(var(--bg))]">
+      <div className="sticky top-0 hidden h-screen shrink-0 md:flex">
+        <DashboardSidebar />
+      </div>
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <DashboardHeader />
-        <main className="flex-1 p-6 overflow-auto animate-fade-in">
+        <main className="animate-fade-in flex-1 overflow-auto p-4 sm:p-6">
           {children}
         </main>
       </div>
