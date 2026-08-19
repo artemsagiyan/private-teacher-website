@@ -1,0 +1,11 @@
+api_key: PLACEHOLDER_KEY
+api_secret: PLACEHOLDER_SECRET
+ws_url: ws://livekit:7880
+insecure: true
+
+redis:
+  address: redis:6379
+
+health_port: 8080
+prometheus_port: 8081
+backup_storage: /out

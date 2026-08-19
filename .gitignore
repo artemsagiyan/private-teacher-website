@@ -9,6 +9,8 @@ node_modules/
 !**/.env.example
 !.env.local.example
 !**/.env.local.example
+!deploy/env.prod.example
+deploy/.env.prod
 
 # Logs
 logs/

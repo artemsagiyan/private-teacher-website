@@ -17,6 +17,29 @@ docker compose up -d --build
 
 ---
 
+## Деплой на VPS (easyphys.ru)
+
+На сервере с nginx (и соседними сайтами на :3001/:3002):
+
+```bash
+git clone git@github.com:artemsagiyan/private-teacher-website.git
+cd private-teacher-website
+sudo bash deploy/deploy.sh --yes
+```
+
+Скрипт сам:
+- ставит Docker / nginx / certbot при необходимости
+- генерирует секреты в `deploy/.env.prod`
+- поднимает стек с портами, которые **не конфликтуют** с соседними сайтами (backend на `3010`)
+- настраивает nginx для `easyphys.ru` + `live.easyphys.ru`
+- выпускает HTTPS (Let's Encrypt)
+
+Перед запуском добавь DNS: `live.easyphys.ru` → IP сервера (нужно для видеоуроков).
+
+Опции: `DOMAIN=... EMAIL=you@mail.ru sudo -E bash deploy/deploy.sh`, `--skip-ssl`, `--yes`.
+
+---
+
 ## Готовые аккаунты (создаются автоматически)
 
 | Роль | Email | Пароль |
