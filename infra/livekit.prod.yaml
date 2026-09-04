@@ -7,6 +7,15 @@ rtc:
   tcp_port: 7881
   udp_port: 7882
   use_external_ip: true
+  stun_servers:
+    - stun:stun.l.google.com:19302
+
+# Embedded TURN for clients behind symmetric / corporate NAT.
+# UDP 3478 must be open on the host (see deploy/docker-compose.prod.yml).
+turn:
+  enabled: true
+  domain: live.easyphys.ru
+  udp_port: 3478
 
 redis:
   address: redis:6379

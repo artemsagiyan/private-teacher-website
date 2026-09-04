@@ -123,6 +123,17 @@ export class LessonProcessingService {
       this.logger.error(
         `Lesson ${lesson.id} processing failed (${attempts}/10): ${message}`,
       );
+      if (permanentlyFailed) {
+        try {
+          await this.notifications.notifyLessonFailed(
+            lesson.teacher?.userId || lesson.teacherId,
+            lesson.id,
+            message,
+          );
+        } catch {
+          /* ignore */
+        }
+      }
     } finally {
       clearInterval(heartbeat);
       this.running.delete(lesson.id);

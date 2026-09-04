@@ -6,6 +6,7 @@ import { GraduationCap, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import { isNavActive, navForRole, roleLabel, type NavItem } from './nav';
+import { UserAvatar } from './user-avatar';
 
 export function DashboardSidebar({
   onNavigate,
@@ -60,8 +61,8 @@ export function DashboardSidebar({
 
       <div className="p-3">
         <div className="flex cursor-default items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-white/5">
-          <div className="icon-violet flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[0.65rem] font-bold text-white">
-            {initials || '?'}
+          <div className="icon-violet flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[0.65rem] font-bold text-white">
+            <UserAvatar className="h-full w-full object-cover" fallback={initials || '?'} />
           </div>
           <div className="min-w-0">
             <p className="truncate text-[0.78rem] font-medium text-white/80">

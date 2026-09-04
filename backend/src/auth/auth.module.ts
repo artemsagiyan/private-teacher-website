@@ -13,6 +13,8 @@ import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
+import { OauthCode } from './entities/oauth-code.entity';
+import { isGoogleOAuthEnabled } from '../common/google-oauth';
 
 @Module({
   imports: [
@@ -25,11 +27,22 @@ import { GoogleStrategy } from './strategies/google.strategy';
         signOptions: { expiresIn: config.get<string>('jwt.expiresIn') },
       }),
     }),
-    TypeOrmModule.forFeature([User, Teacher, Student, RegistrationCode]),
+    TypeOrmModule.forFeature([
+      User,
+      Teacher,
+      Student,
+      RegistrationCode,
+      OauthCode,
+    ]),
     NotificationsModule,
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtRefreshStrategy, GoogleStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    JwtRefreshStrategy,
+    ...(isGoogleOAuthEnabled() ? [GoogleStrategy] : []),
+  ],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

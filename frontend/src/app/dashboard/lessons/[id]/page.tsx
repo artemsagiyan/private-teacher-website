@@ -17,6 +17,7 @@ import {
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import type { LessonRecord, LessonReport } from '@/types';
+import { toast } from 'sonner';
 
 const SECTION_LABELS: Array<{
   key: keyof Pick<
@@ -76,6 +77,8 @@ export default function LessonDetailsPage() {
         `/lessons/${id}/files/${type}`,
         `lesson-${id}-${type}.${extension}`,
       );
+    } catch {
+      toast.error('Не удалось скачать файл');
     } finally {
       setDownloading('');
     }
@@ -100,7 +103,9 @@ export default function LessonDetailsPage() {
   const backHref =
     user?.role === 'teacher'
       ? '/dashboard/teacher/lessons'
-      : '/dashboard/student/lessons';
+      : user?.role === 'admin'
+        ? '/dashboard/admin'
+        : '/dashboard/student/lessons';
   const report =
     lesson.report && 'topics' in lesson.report
       ? (lesson.report as LessonReport)

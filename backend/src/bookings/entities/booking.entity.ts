@@ -47,6 +47,12 @@ export class Booking {
   @Column({ nullable: true })
   recurringGroupId: string;
 
+  @Column({ default: false })
+  reminder24hSent: boolean;
+
+  @Column({ default: false })
+  reminder1hSent: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 }

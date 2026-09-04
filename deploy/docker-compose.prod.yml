@@ -47,7 +47,11 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@easyphys.ru}
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      ENABLE_SEED: ${ENABLE_SEED:-false}
+      SMTP_DISABLED: ${SMTP_DISABLED:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
     ports:
       # Host :3001 is used by ekaterina-math.ru — bind backend to 3010
       - '127.0.0.1:3010:3001'
@@ -68,6 +72,7 @@ services:
       - '7880:7880'
       - '7881:7881'
       - '7882:7882/udp'
+      - '3478:3478/udp'
     volumes:
       - ./infra/livekit.prod.yaml:/etc/livekit.yaml:ro
 
@@ -79,8 +84,8 @@ services:
   transcriber:
     environment:
       WHISPER_MODEL: ${WHISPER_MODEL:-small}
-      WHISPER_DEVICE: cpu
-      WHISPER_COMPUTE_TYPE: int8
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
       HF_HOME: /models
 
   ollama:

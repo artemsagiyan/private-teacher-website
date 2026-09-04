@@ -14,6 +14,7 @@ import { CalendarLegend } from '@/components/calendar/calendar-legend';
 import { CalendarPageHeader } from '@/components/calendar/calendar-page-header';
 import { SidePanel } from '@/components/calendar/side-panel';
 import { formatDateTime } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function AdminCalendarPage() {
   const [slots, setSlots] = useState<CalendarSlot[]>([]);
@@ -24,6 +25,7 @@ export default function AdminCalendarPage() {
     api
       .get<CalendarSlot[]>('/calendar/all')
       .then((data) => setSlots(data ?? []))
+      .catch(() => toast.error('Не удалось загрузить календарь'))
       .finally(() => setLoading(false));
   }, []);
 

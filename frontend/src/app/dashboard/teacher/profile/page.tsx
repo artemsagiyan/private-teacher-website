@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { fullName } from '@/lib/utils';
+import { UserAvatar } from '@/components/layout/user-avatar';
 
 export default function TeacherProfilePage() {
   const { user, setUser } = useAuthStore();
@@ -27,19 +28,32 @@ export default function TeacherProfilePage() {
     api.get<Teacher>('/teachers/me').then((t) => {
       setTeacher(t);
       tForm.reset({ bio: t.bio ?? '', subjects: t.subjects ?? '' });
-    });
+    }).catch(() => toast.error('Не удалось загрузить профиль'));
   }, []);
-
-  const onUserSave = async (data: any) => {
-    setSavingUser(true);
-    try { const u = await api.patch('/users/profile', data); setUser(u as any); toast.success('Сохранено'); }
-    finally { setSavingUser(false); }
-  };
 
   const onTeacherSave = async (data: { bio: string; subjects: string }) => {
     setSavingTeacher(true);
-    try { await api.patch('/teachers/profile', data); toast.success('Информация обновлена'); }
-    finally { setSavingTeacher(false); }
+    try {
+      await api.patch('/teachers/profile', data);
+      toast.success('Информация обновлена');
+    } catch {
+      toast.error('Ошибка сохранения');
+    } finally {
+      setSavingTeacher(false);
+    }
+  };
+
+  const onUserSave = async (data: any) => {
+    setSavingUser(true);
+    try {
+      const u = await api.patch('/users/profile', data);
+      setUser(u as any);
+      toast.success('Сохранено');
+    } catch {
+      toast.error('Ошибка сохранения');
+    } finally {
+      setSavingUser(false);
+    }
   };
 
   const onPwdChange = async (data: any) => {
@@ -55,6 +69,20 @@ export default function TeacherProfilePage() {
 
   const initials = [user?.firstName?.[0], user?.lastName?.[0]].filter(Boolean).join('');
 
+  const onAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      const updated = await api.post('/users/avatar', form);
+      setUser(updated as any);
+      toast.success('Аватар обновлён');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Не удалось загрузить');
+    }
+  };
+
   return (
     <div className="space-y-5 max-w-lg">
       <div>
@@ -64,11 +92,18 @@ export default function TeacherProfilePage() {
 
       {/* Avatar summary */}
       <div className="flex items-center gap-4 p-4 rounded-2xl bg-[rgb(var(--surface))] border border-[rgb(var(--border))] shadow-card">
-        <div className="h-14 w-14 rounded-2xl icon-violet flex items-center justify-center text-white text-xl font-bold shrink-0">
-          {initials || <User className="h-6 w-6" />}
+        <div className="h-14 w-14 rounded-2xl icon-violet flex items-center justify-center text-white text-xl font-bold shrink-0 overflow-hidden">
+          <UserAvatar
+            className="h-full w-full object-cover"
+            fallback={initials || <User className="h-6 w-6" />}
+          />
         </div>
         <div>
           <p className="font-semibold text-[rgb(var(--text))]">{fullName(user ?? undefined) || 'Нет имени'}</p>
+          <label className="mt-1 inline-block text-xs text-primary-600 cursor-pointer hover:underline">
+            Сменить фото
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={onAvatar} />
+          </label>
           <div className="flex items-center gap-1.5 mt-0.5">
             <Mail className="h-3 w-3 text-[rgb(var(--text-3))]" />
             <p className="text-xs text-[rgb(var(--text-2))]">{user?.email}</p>
@@ -123,21 +158,23 @@ export default function TeacherProfilePage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-[rgb(var(--text-3))]" /> Сменить пароль
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={pForm.handleSubmit(onPwdChange)} className="space-y-4">
-            <Input label="Текущий пароль" type="password" placeholder="••••••••" {...pForm.register('oldPassword')} />
-            <Input label="Новый пароль" type="password" placeholder="Минимум 8 символов" {...pForm.register('newPassword')} />
-            <Input label="Подтверждение" type="password" placeholder="Повторите новый пароль" {...pForm.register('confirm')} />
-            <Button type="submit" isLoading={changingPwd} variant="outline">Сменить пароль</Button>
-          </form>
-        </CardContent>
-      </Card>
+      {user?.hasPassword !== false && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Lock className="h-4 w-4 text-[rgb(var(--text-3))]" /> Сменить пароль
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={pForm.handleSubmit(onPwdChange)} className="space-y-4">
+              <Input label="Текущий пароль" type="password" placeholder="••••••••" {...pForm.register('oldPassword')} />
+              <Input label="Новый пароль" type="password" placeholder="Минимум 8 символов" {...pForm.register('newPassword')} />
+              <Input label="Подтверждение" type="password" placeholder="Повторите новый пароль" {...pForm.register('confirm')} />
+              <Button type="submit" isLoading={changingPwd} variant="outline">Сменить пароль</Button>
+            </form>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

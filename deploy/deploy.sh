@@ -148,7 +148,12 @@ SMTP_PASS=
 SMTP_FROM=noreply@${DOMAIN}
 
 WHISPER_MODEL=small
+WHISPER_DEVICE=cpu
 OLLAMA_MODEL=qwen2.5:3b
+ENABLE_SEED=false
+SMTP_DISABLED=false
+ADMIN_EMAIL=
+ADMIN_PASSWORD=
 EOF
   chmod 600 "$ENV_FILE"
 }
@@ -370,10 +375,8 @@ print_summary() {
     www.${DOMAIN}  A/CNAME → ${DOMAIN}
     ${LIVEKIT_HOST} A → this server   ← needed for video
 
-  Default seed logins (if DB is fresh):
-    admin@tutor.local / Admin12345
-    teacher@tutor.local / Teacher12345
-    student@tutor.local / Student12345
+  Default logins are NOT seeded in production.
+  Create an admin with ADMIN_EMAIL / ADMIN_PASSWORD in deploy/.env.prod
 ────────────────────────────────────────────────────────
 EOF
 }

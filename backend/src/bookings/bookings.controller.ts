@@ -1,4 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -6,6 +15,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../users/enums/user-role.enum';
 import { User } from '../users/entities/user.entity';
+import { CreateBookingDto } from './dto/create-booking.dto';
 
 @Controller('bookings')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -16,9 +26,13 @@ export class BookingsController {
   @Roles(UserRole.STUDENT)
   createBooking(
     @CurrentUser() user: User,
-    @Body() body: { slotId: string; isRecurring?: boolean },
+    @Body() body: CreateBookingDto,
   ) {
-    return this.bookingsService.createBooking(user.id, body.slotId, body.isRecurring ?? false);
+    return this.bookingsService.createBooking(
+      user.id,
+      body.slotId,
+      body.isRecurring ?? false,
+    );
   }
 
   @Delete(':id/student')
@@ -28,7 +42,11 @@ export class BookingsController {
     @Param('id') id: string,
     @Query('cancelSeries') cancelSeries: string,
   ) {
-    return this.bookingsService.cancelByStudent(user.id, id, cancelSeries === 'true');
+    return this.bookingsService.cancelByStudent(
+      user.id,
+      id,
+      cancelSeries === 'true',
+    );
   }
 
   @Delete(':id/teacher')

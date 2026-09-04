@@ -17,6 +17,7 @@ import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../users/enums/user-role.enum';
 import { User } from '../users/entities/user.entity';
 import { CreateSlotDto } from './dto/create-slot.dto';
+import { UpdateSlotDto } from './dto/update-slot.dto';
 
 @Controller('calendar')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,7 +35,7 @@ export class CalendarController {
   updateSlot(
     @CurrentUser() user: User,
     @Param('id') id: string,
-    @Body() dto: Partial<CreateSlotDto>,
+    @Body() dto: UpdateSlotDto,
   ) {
     return this.calendarService.updateSlot(user.id, id, dto);
   }

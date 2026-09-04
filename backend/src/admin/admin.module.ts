@@ -7,9 +7,19 @@ import { Student } from '../students/entities/student.entity';
 import { Booking } from '../bookings/entities/booking.entity';
 import { AdminService } from './admin.service';
 import { AdminController } from './admin.controller';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([RegistrationCode, User, Teacher, Student, Booking])],
+  imports: [
+    TypeOrmModule.forFeature([
+      RegistrationCode,
+      User,
+      Teacher,
+      Student,
+      Booking,
+    ]),
+    NotificationsModule,
+  ],
   providers: [AdminService],
   controllers: [AdminController],
   exports: [AdminService],

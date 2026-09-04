@@ -91,7 +91,7 @@ async function testAuth() {
   });
 
   await test('POST /auth/login — wrong password → 401', async () => {
-    const { status } = await req('POST', '/auth/login', { email: ADMIN.email, password: 'wrong' });
+    const { status } = await req('POST', '/auth/login', { email: ADMIN.email, password: 'WrongPass123' });
     expect(status).toBe(401);
   });
 
@@ -113,6 +113,13 @@ async function testAuth() {
     expect(data).toContain('accessToken');
     tokens.student = data.accessToken;
     tokens.studentRefresh = data.refreshToken;
+  });
+
+  await test('POST /auth/forgot-password', async () => {
+    const { status } = await req('POST', '/auth/forgot-password', {
+      email: STUDENT.email,
+    });
+    expect(status).toBe(200);
   });
 
   await test('POST /auth/register/student — новый аккаунт', async () => {
@@ -163,6 +170,16 @@ async function testUsers() {
     expect(status).toBe(200);
     expect(data.firstName).toBe('Иван');
   });
+
+  await test('POST /users/change-password', async () => {
+    const { status } = await req(
+      'POST',
+      '/users/change-password',
+      { oldPassword: STUDENT.password, newPassword: STUDENT.password },
+      tokens.student,
+    );
+    expect(status).toBeOneOf(200, 201);
+  });
 }
 
 async function testTeachers() {
@@ -208,25 +225,49 @@ async function testStudents() {
     const { status } = await req('GET', '/students/teacher', null, tokens.student);
     expect(status).toBeOneOf(200, 200); // null или объект — оба 200
   });
+
+  await test('POST /students/attach-teacher — неверный код', async () => {
+    const { status } = await req(
+      'POST',
+      '/students/attach-teacher',
+      { inviteCode: 'NOPE' },
+      tokens.student,
+    );
+    expect(status).toBeOneOf(400, 404);
+  });
 }
 
 async function testCalendar() {
   section('CALENDAR');
 
-  const start = new Date(Date.now() + 20 * 60 * 1000);
+  const start = new Date(Date.now() + 15 * 60 * 1000);
   start.setSeconds(0, 0);
-  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const end = new Date(start.getTime() + 45 * 60 * 1000);
 
   await test('POST /calendar/slots — создать слот', async () => {
-    const { status, data } = await req('POST', '/calendar/slots', {
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
-      lessonType: 'individual',
-      capacity: 1,
-    }, tokens.teacher);
-    expect(status).toBe(201);
-    expect(data).toContain('id');
-    tokens.slotId = data.id;
+    const existing = await req('GET', '/calendar/teacher', null, tokens.teacher);
+    if (Array.isArray(existing.data)) {
+      for (const slot of existing.data) {
+        await req('DELETE', `/calendar/slots/${slot.id}`, null, tokens.teacher);
+      }
+    }
+
+    let created = null;
+    for (let offsetMin = 12; offsetMin <= 28 && !created; offsetMin += 4) {
+      const s = new Date(Date.now() + offsetMin * 60 * 1000);
+      s.setSeconds(0, 0);
+      const e = new Date(s.getTime() + 25 * 60 * 1000);
+      const { status, data } = await req('POST', '/calendar/slots', {
+        startTime: s.toISOString(),
+        endTime: e.toISOString(),
+        lessonType: 'individual',
+        capacity: 1,
+      }, tokens.teacher);
+      if (status === 201) created = data;
+    }
+    if (!created) throw new Error('не удалось создать свободный слот');
+    expect(created).toContain('id');
+    tokens.slotId = created.id;
   });
 
   await test('GET /calendar/teacher — слоты преподавателя', async () => {
@@ -249,6 +290,17 @@ async function testCalendar() {
       capacity: 1,
     }, tokens.student);
     expect(status).toBe(403);
+  });
+
+  await test('PATCH /calendar/slots/:id — заметка', async () => {
+    if (!tokens.slotId) throw new Error('slotId не получен');
+    const { status } = await req(
+      'PATCH',
+      `/calendar/slots/${tokens.slotId}`,
+      { note: 'тест' },
+      tokens.teacher,
+    );
+    expect(status).toBe(200);
   });
 }
 
@@ -286,6 +338,17 @@ async function testBookings() {
     const { status, data } = await req('GET', '/bookings/teacher', null, tokens.teacher);
     expect(status).toBe(200);
     expect(data).toBeArray();
+  });
+
+  await test('DELETE /bookings/:id/student — меньше 24ч → 400', async () => {
+    if (!tokens.bookingId) throw new Error('bookingId не получен');
+    const { status } = await req(
+      'DELETE',
+      `/bookings/${tokens.bookingId}/student`,
+      null,
+      tokens.student,
+    );
+    expect(status).toBe(400);
   });
 }
 
@@ -341,6 +404,17 @@ async function testLessons() {
     expect(status).toBe(200);
   });
 
+  await test('GET /lessons/:id/status', async () => {
+    const { status, data } = await req(
+      'GET',
+      `/lessons/${tokens.lessonId}/status`,
+      null,
+      tokens.teacher,
+    );
+    expect(status).toBe(200);
+    expect(data).toContain('status');
+  });
+
   await test('POST /lessons/:id/end — ученик не может завершить → 403', async () => {
     const { status } = await req(
       'POST',
@@ -392,6 +466,12 @@ async function testAdmin() {
     expect(data).toBeArray();
   });
 
+  await test('GET /admin/students — список учеников', async () => {
+    const { status, data } = await req('GET', '/admin/students', null, tokens.admin);
+    expect(status).toBe(200);
+    expect(data).toBeArray();
+  });
+
   await test('GET /admin/stats — студент → 403', async () => {
     const { status } = await req('GET', '/admin/stats', null, tokens.student);
     expect(status).toBe(403);
@@ -408,7 +488,9 @@ async function main() {
 
   // проверяем доступность
   try {
-    const ping = await fetch(`${BASE}/docs`, { signal: AbortSignal.timeout(5000) });
+    const ping = await fetch(`${BASE.replace(/\/api$/, '')}/api/health`, {
+      signal: AbortSignal.timeout(5000),
+    });
     console.log(`\n🔌 Backend: ${ping.status === 200 ? 'доступен ✅' : `код ${ping.status}`}`);
   } catch {
     console.log('\n❌ Backend недоступен на http://localhost:3001');

@@ -43,6 +43,7 @@ export const adminNav: NavItem[] = [
   { href: '/dashboard/admin/teachers', label: 'Преподаватели', icon: GraduationCap },
   { href: '/dashboard/admin/codes', label: 'Коды доступа', icon: Shield },
   { href: '/dashboard/admin/calendar', label: 'Все занятия', icon: Calendar },
+  { href: '/dashboard/admin/notifications', label: 'Уведомления', icon: Bell },
 ];
 
 export const roleLabel: Record<string, string> = {

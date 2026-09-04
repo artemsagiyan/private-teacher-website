@@ -11,6 +11,7 @@ import { GraduationCap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api-error';
 import { useAuthStore } from '@/store/auth.store';
 import { AuthTokens } from '@/types';
 
@@ -38,7 +39,7 @@ export default function LoginPage() {
       const role = tokens.user.role;
       router.push(role === 'teacher' ? '/dashboard/teacher' : role === 'admin' ? '/dashboard/admin' : '/dashboard/student');
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Неверный email или пароль');
+      toast.error(apiErrorMessage(err, 'Неверный email или пароль'));
     } finally {
       setIsLoading(false);
     }
@@ -109,6 +110,11 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input label="Email" type="email" placeholder="you@example.com" error={errors.email?.message} {...register('email')} />
             <Input label="Пароль" type="password" placeholder="••••••••" error={errors.password?.message} {...register('password')} />
+            <div className="flex justify-end -mt-2">
+              <Link href="/auth/forgot-password" className="text-xs text-primary-600 dark:text-primary-400 hover:underline">
+                Забыли пароль?
+              </Link>
+            </div>
             <Button type="submit" className="w-full" size="lg" isLoading={isLoading}>Войти</Button>
           </form>
 

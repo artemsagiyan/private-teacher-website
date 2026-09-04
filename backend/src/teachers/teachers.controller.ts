@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../users/enums/user-role.enum';
+import { UpdateTeacherProfileDto } from './dto/update-teacher-profile.dto';
 import { User } from '../users/entities/user.entity';
 
 @Controller('teachers')
@@ -20,7 +21,10 @@ export class TeachersController {
 
   @Patch('profile')
   @Roles(UserRole.TEACHER)
-  updateProfile(@CurrentUser() user: User, @Body() body: { bio?: string; subjects?: string }) {
+  updateProfile(
+    @CurrentUser() user: User,
+    @Body() body: UpdateTeacherProfileDto,
+  ) {
     return this.teachersService.updateProfile(user.id, body);
   }
 

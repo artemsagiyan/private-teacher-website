@@ -34,10 +34,10 @@ export class CalendarSlot {
   @Column()
   teacherId: string;
 
-  @Column()
+  @Column({ type: 'timestamptz' })
   startTime: Date;
 
-  @Column()
+  @Column({ type: 'timestamptz' })
   endTime: Date;
 
   @Column({ type: 'enum', enum: SlotStatus, default: SlotStatus.AVAILABLE })

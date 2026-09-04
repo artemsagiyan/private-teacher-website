@@ -270,8 +270,17 @@ export class LivekitLifecycleService {
     }
     await this.lessonRepo.update(lesson.id, update);
 
+    const teacherUserId = lesson.teacher?.userId;
+    const teacherPresent = Boolean(
+      teacherUserId && identities.includes(teacherUserId),
+    );
+    const studentPresent = identities.some(
+      (identity) => identity !== teacherUserId,
+    );
+
     if (
-      participantCount >= 2 &&
+      teacherPresent &&
+      studentPresent &&
       lesson.status === LessonStatus.WAITING
     ) {
       await this.startRecording(lesson);

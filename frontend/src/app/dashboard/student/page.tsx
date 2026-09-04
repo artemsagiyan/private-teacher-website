@@ -11,6 +11,7 @@ import { api } from '@/lib/api';
 import { Booking, Teacher } from '@/types';
 import { formatDateTime, fullName } from '@/lib/utils';
 import { canJoinLesson, lessonTypeLabel } from '@/lib/lesson';
+import { toast } from 'sonner';
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -22,10 +23,15 @@ export default function StudentDashboard() {
     Promise.all([
       api.get<Booking[]>('/bookings/upcoming'),
       api.get<Teacher | null>('/students/teacher'),
-    ]).then(([bookings, t]) => {
-      setUpcoming(bookings ?? []);
-      setTeacher(t);
-    }).finally(() => setLoading(false));
+    ])
+      .then(([bookings, t]) => {
+        setUpcoming(bookings ?? []);
+        setTeacher(t);
+      })
+      .catch(() => {
+        toast.error('Не удалось загрузить главную');
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) {

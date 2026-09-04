@@ -17,7 +17,9 @@ export function isPdfFile(file: File): boolean {
   );
 }
 
-export async function pdfFileToImages(file: File): Promise<PdfPageImage[]> {
+export async function pdfFileToImages(
+  file: File,
+): Promise<{ pages: PdfPageImage[]; truncated: boolean }> {
   const pdfjs = await import('pdfjs-dist');
 
   // Bundle the worker locally so PDF import also works without internet.
@@ -57,5 +59,5 @@ export async function pdfFileToImages(file: File): Promise<PdfPageImage[]> {
     throw new Error('Не удалось прочитать страницы PDF');
   }
 
-  return pages;
+  return { pages, truncated: pdf.numPages > MAX_PAGES };
 }

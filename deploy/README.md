@@ -33,6 +33,10 @@ sudo bash deploy/deploy.sh --yes
 
 Without `live.*`, the site and API still work; video lessons will not.
 
+TURN: production LiveKit advertises `live.easyphys.ru:3478/udp`. Open UDP **3478**
+on the firewall (in addition to 7880–7882) so students behind symmetric NAT can
+connect.
+
 ## Options
 
 ```bash
@@ -47,3 +51,28 @@ cd /path/to/private-teacher-website
 docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod ps
 docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod logs -f
 ```
+
+## Bootstrap admin
+
+Set `ADMIN_EMAIL` and `ADMIN_PASSWORD` in `deploy/.env.prod`. Demo seed accounts are **not** created in production unless `ENABLE_SEED=true`.
+
+## Backups
+
+Nightly script: `deploy/backup.sh` (Postgres dump + MinIO volume tarball, 14-day retention).
+
+```bash
+sudo mkdir -p /var/backups/tutorplatform
+sudo chmod +x deploy/backup.sh
+# cron: 15 3 * * * /path/to/private-teacher-website/deploy/backup.sh
+```
+
+Restore Postgres:
+
+```bash
+gunzip -c /var/backups/tutorplatform/STAMP/postgres.sql.gz | \
+  docker exec -i tutor_postgres psql -U postgres tutor_platform
+```
+
+## AI models (prod vs local)
+
+Local compose uses `qwen3:8b` and Whisper `large-v3-turbo`. Production defaults are lighter: `qwen2.5:3b` and Whisper `small`. Override via `OLLAMA_MODEL`, `WHISPER_MODEL`, `WHISPER_DEVICE` in `deploy/.env.prod`. For GPU transcription set `WHISPER_DEVICE=cuda` and `WHISPER_COMPUTE_TYPE=float16`.

@@ -532,6 +532,44 @@ export default function TeacherCalendarPage() {
                     {selected.note}
                   </p>
                 )}
+                {selected.status === 'available' && (
+                  <div className="space-y-2">
+                    <input
+                      defaultValue={selected.note ?? ''}
+                      key={selected.id}
+                      id="edit-note"
+                      placeholder="Заметка"
+                      className="w-full rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--surface))] px-3 py-2 text-sm"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      onClick={async () => {
+                        const input = document.getElementById(
+                          'edit-note',
+                        ) as HTMLInputElement | null;
+                        try {
+                          await api.patch(`/calendar/slots/${selected.id}`, {
+                            note: input?.value || '',
+                            startTime: selected.startTime,
+                            endTime: selected.endTime,
+                            lessonType: selected.lessonType,
+                            capacity: selected.capacity,
+                          });
+                          toast.success('Слот обновлён');
+                          await load();
+                        } catch (err: any) {
+                          toast.error(
+                            err.response?.data?.message || 'Не удалось сохранить',
+                          );
+                        }
+                      }}
+                    >
+                      Сохранить заметку
+                    </Button>
+                  </div>
+                )}
               </div>
 
               {joinable && (

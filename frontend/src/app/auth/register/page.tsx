@@ -11,6 +11,7 @@ import { GraduationCap, Users, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { apiErrorMessage } from '@/lib/api-error';
 import { useAuthStore } from '@/store/auth.store';
 import { AuthTokens } from '@/types';
 import { cn } from '@/lib/utils';
@@ -50,8 +51,8 @@ export default function RegisterPage() {
       login(tokens);
       toast.success('Аккаунт создан!');
       router.push('/dashboard/student');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Ошибка регистрации');
+    } catch (err: unknown) {
+      toast.error(apiErrorMessage(err, 'Ошибка регистрации'));
     } finally {
       setIsLoading(false);
     }
@@ -64,8 +65,8 @@ export default function RegisterPage() {
       login(tokens);
       toast.success('Аккаунт преподавателя создан!');
       router.push('/dashboard/teacher');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Ошибка регистрации');
+    } catch (err: unknown) {
+      toast.error(apiErrorMessage(err, 'Ошибка регистрации'));
     } finally {
       setIsLoading(false);
     }

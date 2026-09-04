@@ -44,7 +44,7 @@ export default function StudentCalendarPage() {
   const [bookingType, setBookingType] = useState<'once' | 'recurring'>('once');
   const [loading, setLoading] = useState(true);
 
-  const load = async () => {
+      const load = async () => {
     try {
       const [bookings, slots] = await Promise.all([
         api.get<Booking[]>('/bookings/upcoming'),
@@ -206,6 +206,19 @@ export default function StudentCalendarPage() {
             ]}
             showRecurringHint={mode === 'book'}
           />
+
+          {mode === 'book' && !loading && freeSlots.length === 0 && (
+            <EmptyState
+              icon={Users}
+              title="Нет свободных слотов"
+              description="Привяжитесь к преподавателю по коду, чтобы видеть его расписание."
+              action={
+                <Link href="/dashboard/student/teacher">
+                  <Button size="sm">Привязать преподавателя</Button>
+                </Link>
+              }
+            />
+          )}
 
           {selected && mode === 'book' ? (
             <SidePanel

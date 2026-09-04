@@ -7,8 +7,9 @@ import { Strategy, VerifyCallback } from 'passport-google-oauth20';
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(private configService: ConfigService) {
     super({
-      clientID: configService.get<string>('google.clientId'),
-      clientSecret: configService.get<string>('google.clientSecret'),
+      clientID: configService.get<string>('google.clientId') || 'disabled',
+      clientSecret:
+        configService.get<string>('google.clientSecret') || 'disabled',
       callbackURL: configService.get<string>('google.callbackUrl'),
       scope: ['email', 'profile'],
     });
@@ -21,12 +22,13 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     done: VerifyCallback,
   ) {
     const { id, name, emails, photos } = profile;
+    const email = emails?.[0]?.value;
     const user = {
       googleId: id,
-      email: emails[0].value,
-      firstName: name.givenName,
-      lastName: name.familyName,
-      avatarUrl: photos[0]?.value,
+      email,
+      firstName: name?.givenName || '',
+      lastName: name?.familyName || '',
+      avatarUrl: photos?.[0]?.value,
     };
     done(null, user);
   }

@@ -97,9 +97,12 @@ export class VideoService {
 
     await this.lifecycle.ensureRoom(lesson);
 
+    const remainingMs = Math.max(5 * 60_000, end + lateMs - now);
+    const ttlSeconds = Math.min(Math.ceil(remainingMs / 1000), 8 * 3600);
+
     const at = new AccessToken(apiKey, apiSecret, {
       identity: userId,
-      ttl: '10m',
+      ttl: ttlSeconds,
       metadata: JSON.stringify({
         lessonId: lesson.id,
         slotId,

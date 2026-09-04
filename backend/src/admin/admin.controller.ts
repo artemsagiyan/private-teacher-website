@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -6,6 +15,11 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../users/enums/user-role.enum';
 import { User } from '../users/entities/user.entity';
+import {
+  AssignTeacherDto,
+  BlockUserDto,
+  GenerateCodeDto,
+} from './dto/admin.dto';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -14,8 +28,11 @@ export class AdminController {
   constructor(private adminService: AdminService) {}
 
   @Post('codes')
-  generateCode(@CurrentUser() user: User, @Body() body: { expiresInDays?: number }) {
-    return this.adminService.generateRegistrationCode(user.id, body.expiresInDays);
+  generateCode(@CurrentUser() user: User, @Body() body: GenerateCodeDto) {
+    return this.adminService.generateRegistrationCode(
+      user.id,
+      body.expiresInDays,
+    );
   }
 
   @Get('codes')
@@ -33,13 +50,16 @@ export class AdminController {
   }
 
   @Patch('users/:id/block')
-  blockUser(@Param('id') id: string, @Body() body: { isBlocked: boolean }) {
+  blockUser(@Param('id') id: string, @Body() body: BlockUserDto) {
     return this.adminService.blockUser(id, body.isBlocked);
   }
 
   @Patch('assign')
-  assignTeacher(@Body() body: { studentId: string; teacherId: string }) {
-    return this.adminService.assignTeacherToStudent(body.studentId, body.teacherId);
+  assignTeacher(@Body() body: AssignTeacherDto) {
+    return this.adminService.assignTeacherToStudent(
+      body.studentId,
+      body.teacherId,
+    );
   }
 
   @Get('stats')
@@ -50,5 +70,10 @@ export class AdminController {
   @Get('teachers')
   listTeachers() {
     return this.adminService.listTeachers();
+  }
+
+  @Get('students')
+  listStudents() {
+    return this.adminService.listStudents();
   }
 }

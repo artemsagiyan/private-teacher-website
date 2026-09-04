@@ -22,7 +22,11 @@ export default function AdminUsersPage() {
   const [total, setTotal]   = useState(0);
   const [search, setSearch] = useState('');
   const [page, setPage]     = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [assignStudent, setAssignStudent] = useState('');
+  const [assignTeacher, setAssignTeacher] = useState('');
+  const [students, setStudents] = useState<Array<{ id: string; user?: User }>>([]);
+  const [teachers, setTeachers] = useState<Array<{ id: string; user?: User }>>([]);
   const limit = 20;
 
   const load = useCallback(async () => {
@@ -37,6 +41,17 @@ export default function AdminUsersPage() {
   }, [page, search]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    api
+      .get<Array<{ id: string; user?: User }>>('/admin/students')
+      .then(setStudents)
+      .catch(() => {});
+    api
+      .get<Array<{ id: string; user?: User }>>('/admin/teachers')
+      .then(setTeachers)
+      .catch(() => {});
+  }, []);
 
   const handleBlock = async (u: User) => {
     const action = u.isBlocked ? 'разблокировать' : 'заблокировать';
@@ -69,6 +84,55 @@ export default function AdminUsersPage() {
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
         />
       </div>
+
+      <Card>
+        <CardContent className="p-4 space-y-3">
+          <p className="text-sm font-medium text-[rgb(var(--text))]">Привязать ученика к преподавателю</p>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              className="flex-1 rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--surface))] px-3 py-2 text-sm"
+              value={assignStudent}
+              onChange={(e) => setAssignStudent(e.target.value)}
+            >
+              <option value="">Ученик</option>
+              {students.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {fullName(s.user) || s.user?.email || s.id}
+                </option>
+              ))}
+            </select>
+            <select
+              className="flex-1 rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--surface))] px-3 py-2 text-sm"
+              value={assignTeacher}
+              onChange={(e) => setAssignTeacher(e.target.value)}
+            >
+              <option value="">Преподаватель</option>
+              {teachers.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {fullName(t.user) || t.user?.email || t.id}
+                </option>
+              ))}
+            </select>
+            <Button
+              size="sm"
+              disabled={!assignStudent || !assignTeacher}
+              onClick={async () => {
+                try {
+                  await api.patch('/admin/assign', {
+                    studentId: assignStudent,
+                    teacherId: assignTeacher,
+                  });
+                  toast.success('Преподаватель назначен');
+                } catch {
+                  toast.error('Не удалось назначить');
+                }
+              }}
+            >
+              Назначить
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">

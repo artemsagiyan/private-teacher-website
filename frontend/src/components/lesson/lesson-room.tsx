@@ -112,6 +112,84 @@ function WhiteboardPanel({
     moved: boolean;
   } | null>(null);
   const importingRef = useRef(false);
+  const remoteAssetsRef = useRef<Record<string, string>>({});
+
+  const blobToDataURL = (blob: Blob) =>
+    new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+
+  const packFileForSync = useCallback(
+    async (file: any) => {
+      if (!file?.id) return null;
+      const knownAsset = remoteAssetsRef.current[file.id] || file.assetId;
+      if (knownAsset) {
+        return {
+          id: file.id,
+          mimeType: file.mimeType,
+          assetId: knownAsset,
+          created: file.created,
+        };
+      }
+      const dataURL = file.dataURL as string | undefined;
+      if (dataURL && dataURL.length <= WB_FILE_SYNC_MAX) {
+        return file;
+      }
+      if (!dataURL) return null;
+      try {
+        const blob = await (await fetch(dataURL)).blob();
+        const form = new FormData();
+        form.append(
+          'file',
+          blob,
+          `${file.id}.${(file.mimeType || 'image/png').split('/')[1] || 'png'}`,
+        );
+        const uploaded = await api.post<{ assetId: string; mimeType: string }>(
+          `/lessons/${lessonId}/board-assets`,
+          form,
+        );
+        remoteAssetsRef.current[file.id] = uploaded.assetId;
+        return {
+          id: file.id,
+          mimeType: file.mimeType || uploaded.mimeType,
+          assetId: uploaded.assetId,
+          created: file.created,
+        };
+      } catch {
+        toast.message('Не удалось загрузить изображение на сервер — синхронизация без файла');
+        return null;
+      }
+    },
+    [lessonId],
+  );
+
+  const resolveRemoteFiles = useCallback(
+    async (files: any[]) => {
+      const resolved: any[] = [];
+      for (const file of files) {
+        if (file?.assetId && !file.dataURL) {
+          try {
+            const blob = await api.getBlob(
+              `/lessons/${lessonId}/board-assets/${file.assetId}`,
+            );
+            const dataURL = await blobToDataURL(blob);
+            remoteAssetsRef.current[file.id] = file.assetId;
+            resolved.push({ ...file, dataURL });
+          } catch {
+            /* skip missing remote file */
+          }
+        } else if (file) {
+          if (file.assetId) remoteAssetsRef.current[file.id] = file.assetId;
+          resolved.push(file);
+        }
+      }
+      return resolved;
+    },
+    [lessonId],
+  );
 
   const buildSnapshot = useCallback(
     (
@@ -233,83 +311,92 @@ function WhiteboardPanel({
   );
 
   const { send } = useDataChannel('wb', (msg) => {
-    try {
-      const payload = JSON.parse(dec.current.decode(msg.payload));
-      if (!apiRef.current) return;
-      skipRef.current = true;
-      if (payload.files?.length) {
-        apiRef.current.addFiles(payload.files);
+    void (async () => {
+      try {
+        const payload = JSON.parse(dec.current.decode(msg.payload));
+        if (!apiRef.current) return;
+        skipRef.current = true;
+        const remoteFiles = payload.files?.length
+          ? await resolveRemoteFiles(payload.files)
+          : [];
+        if (remoteFiles.length) {
+          apiRef.current.addFiles(remoteFiles);
+        }
+        if (payload.elements) {
+          const localElements =
+            apiRef.current.getSceneElementsIncludingDeleted?.() ||
+            apiRef.current.getSceneElements();
+          const merged = mergeSnapshots(
+            {
+              elements: payload.elements,
+              files: Object.fromEntries(
+                remoteFiles.map((file: any) => [file.id, file]),
+              ),
+              revision: payload.revision,
+            },
+            {
+              elements: localElements,
+              files: apiRef.current.getFiles?.() || {},
+            },
+          );
+          apiRef.current.updateScene({
+            elements: merged.elements,
+            captureUpdate: 'NEVER',
+          });
+          persistBoard(
+            merged.elements,
+            apiRef.current.getAppState(),
+            merged.files,
+          );
+        }
+      } catch {
+        /* ignore malformed */
       }
-      if (payload.elements) {
-        const localElements =
-          apiRef.current.getSceneElementsIncludingDeleted?.() ||
-          apiRef.current.getSceneElements();
-        const merged = mergeSnapshots(
-          {
-            elements: payload.elements,
-            files: Object.fromEntries(
-              (payload.files || []).map((file: any) => [file.id, file]),
-            ),
-          },
-          {
-            elements: localElements,
-            files: apiRef.current.getFiles(),
-          },
-        );
-        apiRef.current.updateScene({
-          elements: merged.elements,
-          captureUpdate: 'NEVER',
-        });
-        persistBoard(
-          merged.elements,
-          apiRef.current.getAppState(),
-          merged.files,
-        );
-      }
-    } catch {
-      /* ignore malformed */
-    }
+    })();
   });
 
   const broadcast = useCallback(
     (elements: readonly any[], files?: Record<string, any>) => {
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        const fileList: any[] = [];
-        if (files) {
-          for (const f of Object.values(files)) {
-            const dataURL = (f as any)?.dataURL as string | undefined;
-            if (!dataURL || dataURL.length > WB_FILE_SYNC_MAX) continue;
-            fileList.push(f);
+        void (async () => {
+          const fileList: any[] = [];
+          if (files) {
+            for (const f of Object.values(files)) {
+              const packed = await packFileForSync(f);
+              if (packed) fileList.push(packed);
+            }
           }
-        }
 
-        const encode = (payload: { elements: any[]; files: any[] }) =>
-          enc.current.encode(JSON.stringify(payload));
+          const encode = (payload: { elements: any[]; files: any[] }) =>
+            enc.current.encode(JSON.stringify(payload));
 
-        let body = encode({
-          elements: [...elements],
-          files: fileList,
-        });
-        // Prefer elements-only if files push us over the LiveKit limit
-        if (body.byteLength > WB_PAYLOAD_MAX && fileList.length) {
-          body = encode({ elements: [...elements], files: [] });
-        }
-        if (body.byteLength > WB_PAYLOAD_MAX) {
-          return;
-        }
-
-        try {
-          const result = send(body, {});
-          void Promise.resolve(result).catch(() => {
-            /* room not ready / publish failed */
+          let body = encode({
+            elements: [...elements],
+            files: fileList,
           });
-        } catch {
-          /* room not ready */
-        }
+          if (body.byteLength > WB_PAYLOAD_MAX && fileList.length) {
+            body = encode({ elements: [...elements], files: [] });
+          }
+          if (body.byteLength > WB_PAYLOAD_MAX) {
+            toast.message(
+              'Доска слишком большая для мгновенной синхронизации — сохраняем на сервер',
+            );
+            return;
+          }
+
+          try {
+            const result = send(body, {});
+            void Promise.resolve(result).catch(() => {
+              /* room not ready / publish failed */
+            });
+          } catch {
+            /* room not ready */
+          }
+        })();
       }, 200);
     },
-    [send],
+    [packFileForSync, send],
   );
 
   const handleChange = useCallback(
@@ -450,7 +537,10 @@ function WhiteboardPanel({
       if (!api) return;
       const mod = await import('@excalidraw/excalidraw');
       toast.message('Загрузка PDF…');
-      const pages = await pdfFileToImages(file);
+      const { pages, truncated } = await pdfFileToImages(file);
+      if (truncated) {
+        toast.message('PDF обрезан до 15 страниц');
+      }
       const appState = api.getAppState();
       const startX = -appState.scrollX + 40 / appState.zoom.value;
       let y = -appState.scrollY + 40 / appState.zoom.value;
@@ -999,6 +1089,14 @@ export function LessonRoom({
   const pipDragOffset = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
+    const onLeave = () => {
+      void boardFlushRef.current?.();
+    };
+    window.addEventListener('beforeunload', onLeave);
+    return () => window.removeEventListener('beforeunload', onLeave);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
     const refresh = async () => {
       try {
@@ -1220,7 +1318,10 @@ export function LessonRoom({
         video
         audio
         data-lk-theme="default"
-        onDisconnected={() => router.push(backHref)}
+        onDisconnected={() => {
+          void boardFlushRef.current?.();
+          router.push(backHref);
+        }}
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
         {/* Header bar */}

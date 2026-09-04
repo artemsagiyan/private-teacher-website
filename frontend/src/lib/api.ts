@@ -14,6 +14,9 @@ class ApiClient {
     this.client.interceptors.request.use((config) => {
       const token = this.getAccessToken();
       if (token) config.headers.Authorization = `Bearer ${token}`;
+      if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+      }
       return config;
     });
 
@@ -82,6 +85,11 @@ class ApiClient {
 
   async delete<T>(url: string, config?: AxiosRequestConfig) {
     const res = await this.client.delete<T>(url, config);
+    return res.data;
+  }
+
+  async getBlob(url: string) {
+    const res = await this.client.get<Blob>(url, { responseType: 'blob' });
     return res.data;
   }
 

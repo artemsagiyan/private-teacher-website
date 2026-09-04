@@ -5,6 +5,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { UserRole } from '../users/enums/user-role.enum';
+import { AttachTeacherDto } from './dto/attach-teacher.dto';
 import { User } from '../users/entities/user.entity';
 
 @Controller('students')
@@ -26,7 +27,7 @@ export class StudentsController {
 
   @Post('attach-teacher')
   @Roles(UserRole.STUDENT)
-  attachTeacher(@CurrentUser() user: User, @Body() body: { inviteCode: string }) {
+  attachTeacher(@CurrentUser() user: User, @Body() body: AttachTeacherDto) {
     return this.studentsService.attachTeacherByCode(user.id, body.inviteCode);
   }
 

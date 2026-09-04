@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Menu, Sun, Moon, LogOut, X } from 'lucide-react';
+import { Menu, Sun, Moon, LogOut, X, Bell } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { DashboardSidebar } from './dashboard-sidebar';
+import { api } from '@/lib/api';
+import Link from 'next/link';
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -21,6 +23,7 @@ function ThemeToggle() {
         'transition-all duration-150 hover:bg-[rgb(var(--surface-2))]',
       )}
       title="Переключить тему"
+      aria-label="Переключить тему"
     >
       <Sun className="absolute h-4 w-4 scale-100 opacity-100 transition-all dark:scale-50 dark:opacity-0" />
       <Moon className="absolute h-4 w-4 scale-50 opacity-0 transition-all dark:scale-100 dark:opacity-100" />
@@ -32,6 +35,28 @@ export function DashboardHeader() {
   const { user, logout } = useAuthStore();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const count = await api.get<number>('/notifications/unread-count');
+        if (!cancelled) setUnread(typeof count === 'number' ? count : 0);
+      } catch {
+        /* ignore */
+      }
+    };
+    void load();
+    const id = window.setInterval(load, 45_000);
+    const onFocus = () => void load();
+    window.addEventListener('focus', onFocus);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -73,6 +98,24 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-1">
+          <Link
+            href={
+              user?.role === 'teacher'
+                ? '/dashboard/teacher/notifications'
+                : user?.role === 'admin'
+                  ? '/dashboard/admin/notifications'
+                  : '/dashboard/student/notifications'
+            }
+            className="relative flex h-8 w-8 items-center justify-center rounded-lg text-[rgb(var(--text-2))] hover:bg-[rgb(var(--surface-2))] hover:text-[rgb(var(--text))]"
+            aria-label="Уведомления"
+          >
+            <Bell className="h-4 w-4" />
+            {unread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 min-w-[1rem] rounded-full bg-red-500 px-1 text-[10px] font-bold leading-4 text-white text-center">
+                {unread > 9 ? '9+' : unread}
+              </span>
+            )}
+          </Link>
           <ThemeToggle />
           <button
             type="button"
@@ -83,6 +126,7 @@ export function DashboardHeader() {
               'transition-all duration-150 hover:bg-red-50 dark:hover:bg-red-500/10',
             )}
             title="Выйти"
+            aria-label="Выйти"
           >
             <LogOut className="h-4 w-4" />
           </button>

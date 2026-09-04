@@ -5,10 +5,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Request } from 'express';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { Repository } from 'typeorm';
+import * as bcrypt from 'bcryptjs';
 import { User } from '../../users/entities/user.entity';
 
 @Injectable()
-export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh') {
+export class JwtRefreshStrategy extends PassportStrategy(
+  Strategy,
+  'jwt-refresh',
+) {
   constructor(
     private configService: ConfigService,
     @InjectRepository(User)
@@ -24,8 +28,23 @@ export class JwtRefreshStrategy extends PassportStrategy(Strategy, 'jwt-refresh'
 
   async validate(req: Request, payload: { sub: string }) {
     const refreshToken = req.body?.refreshToken;
-    const user = await this.userRepository.findOne({ where: { id: payload.sub } });
-    if (!user || !user.refreshToken) throw new UnauthorizedException();
-    return { ...user, refreshToken };
+    const user = await this.userRepository.findOne({
+      where: { id: payload.sub },
+      select: [
+        'id',
+        'email',
+        'role',
+        'isBlocked',
+        'firstName',
+        'lastName',
+        'refreshToken',
+      ],
+    });
+    if (!user || user.isBlocked || !user.refreshToken || !refreshToken) {
+      throw new UnauthorizedException();
+    }
+    const matches = await bcrypt.compare(refreshToken, user.refreshToken);
+    if (!matches) throw new UnauthorizedException();
+    return user;
   }
 }

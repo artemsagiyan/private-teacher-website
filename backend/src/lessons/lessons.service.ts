@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -251,6 +252,79 @@ export class LessonsService {
       lesson.boardObjectKey,
     );
     return { ...scene, revision: lesson.boardRevision || 0 };
+  }
+
+  async saveBoardAsset(
+    user: User,
+    lessonId: string,
+    file: Express.Multer.File,
+  ) {
+    const lesson = await this.getAccessibleLesson(user, lessonId);
+    if (
+      [
+        LessonStatus.ENDING,
+        LessonStatus.PROCESSING,
+        LessonStatus.COMPLETED,
+        LessonStatus.FAILED,
+      ].includes(lesson.status)
+    ) {
+      throw new ConflictException('Урок уже завершён');
+    }
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('Файл не получен');
+    }
+    const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if (!allowed.includes(file.mimetype)) {
+      throw new BadRequestException(
+        'Допустимы изображения JPEG, PNG, WebP или GIF',
+      );
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      throw new BadRequestException('Максимальный размер файла — 8 МБ');
+    }
+    const assetId = randomUUID();
+    const ext =
+      file.mimetype === 'image/png'
+        ? 'png'
+        : file.mimetype === 'image/webp'
+          ? 'webp'
+          : file.mimetype === 'image/gif'
+            ? 'gif'
+            : 'jpg';
+    const objectKey = `lessons/${lesson.id}/assets/${assetId}.${ext}`;
+    await this.storage.putBuffer(objectKey, file.buffer, file.mimetype);
+    return { assetId, mimeType: file.mimetype };
+  }
+
+  async getBoardAsset(user: User, lessonId: string, assetId: string) {
+    await this.getAccessibleLesson(user, lessonId);
+    if (!/^[0-9a-f-]{36}$/i.test(assetId)) {
+      throw new BadRequestException('Некорректный идентификатор файла');
+    }
+    const candidates: Array<{ key: string; contentType: string }> = [
+      {
+        key: `lessons/${lessonId}/assets/${assetId}.jpg`,
+        contentType: 'image/jpeg',
+      },
+      {
+        key: `lessons/${lessonId}/assets/${assetId}.png`,
+        contentType: 'image/png',
+      },
+      {
+        key: `lessons/${lessonId}/assets/${assetId}.webp`,
+        contentType: 'image/webp',
+      },
+      {
+        key: `lessons/${lessonId}/assets/${assetId}.gif`,
+        contentType: 'image/gif',
+      },
+    ];
+    for (const candidate of candidates) {
+      if (await this.storage.exists(candidate.key)) {
+        return candidate;
+      }
+    }
+    throw new NotFoundException('Файл доски не найден');
   }
 
   async getFile(

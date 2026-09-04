@@ -10,10 +10,19 @@
 docker compose up -d --build
 ```
 
+Чтобы гонять API с хоста (`npm run dev:backend`), достаточно инфраструктуры:
+
+```bash
+docker compose up -d postgres minio redis livekit
+npm run dev:backend
+npm run dev:frontend
+```
+
+Postgres с хоста: `localhost:5433` (не 5432). Скопируйте `backend/.env.example` → `backend/.env`.
+
 Первый запуск скачивает локальные AI-модели (`faster-whisper large-v3-turbo`
-и `Qwen3 8B`), поэтому может занять 10–30 минут и потребовать около 12–15 ГБ
-свободного места. Для комфортной работы рекомендуется выделить Docker не
-менее 10–12 ГБ RAM.
+и `Qwen3 8B` в docker-compose для разработки). В production по умолчанию
+стоят более лёгкие `whisper small` и `qwen2.5:3b` — см. `deploy/README.md`.
 
 ---
 
@@ -198,8 +207,8 @@ docker exec -it tutor_postgres psql -U postgres -d tutor_platform \
 ## Запись, транскрипция и отчёты
 
 - **LiveKit Egress** записывает смешанное аудио урока в OGG.
-- Вход открывается за 30 минут до слота; токен подключения живёт 10 минут
-  (уже установленное соединение не обрывается).
+- Вход открывается за 30 минут до слота; TTL токена LiveKit равен оставшемуся
+  времени урока (плюс окно опоздания, максимум 8 часов).
 - **MinIO** хранит запись, доску, транскрипт и отчёт.
 - **faster-whisper** локально распознаёт русскую речь без внешних API.
 - **Ollama + Qwen3 8B** локально формирует структурированный отчёт.

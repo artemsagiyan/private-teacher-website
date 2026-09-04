@@ -10,6 +10,7 @@ export interface User {
   avatarUrl?: string;
   isBlocked: boolean;
   isEmailVerified: boolean;
+  hasPassword?: boolean;
   createdAt: string;
 }
 
@@ -76,7 +77,8 @@ export type NotificationType =
   | 'reminder_24h'
   | 'reminder_1h'
   | 'teacher_invitation'
-  | 'lesson_report_ready';
+  | 'lesson_report_ready'
+  | 'lesson_failed';
 
 export interface Notification {
   id: string;

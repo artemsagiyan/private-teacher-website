@@ -29,8 +29,8 @@ export default function LandingPage() {
           </h1>
 
           <p className="text-lg text-[rgb(var(--text-2))] max-w-xl mx-auto mb-10 leading-relaxed">
-            Записывайтесь на занятия в удобное время, отслеживайте прогресс
-            и общайтесь с преподавателем — всё в одном месте.
+            Записывайтесь на занятия в удобное время, занимайтесь по видео
+            с доской и получайте отчёт после урока — всё в одном месте.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
@@ -131,7 +131,7 @@ const features = [
     icon: BookOpen,
     iconBg: 'icon-green',
     title: 'История занятий',
-    desc: 'Отслеживайте все прошедшие уроки, записи и статусы в удобном личном кабинете.',
+    desc: 'Отчёты, транскрипты и записи прошедших видеоуроков в личном кабинете.',
   },
   {
     icon: Users,

@@ -39,11 +39,17 @@ export class User {
   @Column({ default: false })
   isEmailVerified: boolean;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, select: false })
   emailVerificationToken: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, select: false })
   refreshToken: string;
+
+  @Column({ nullable: true, select: false })
+  passwordResetToken: string;
+
+  @Column({ type: 'timestamptz', nullable: true, select: false })
+  passwordResetExpires: Date;
 
   @Column({ default: false })
   isBlocked: boolean;

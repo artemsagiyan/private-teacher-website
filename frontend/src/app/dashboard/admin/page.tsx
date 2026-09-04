@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Users, GraduationCap, BookOpen, TrendingUp } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
 
 interface Stats { totalUsers: number; totalStudents: number; totalTeachers: number; totalBookings: number; }
 
@@ -13,8 +14,21 @@ function Skeleton({ className }: { className?: string }) {
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [error, setError] = useState(false);
 
-  useEffect(() => { api.get<Stats>('/admin/stats').then(setStats).catch(() => {}); }, []);
+  useEffect(() => {
+    api
+      .get<Stats>('/admin/stats')
+      .then(setStats)
+      .catch(() => {
+        setError(true);
+        toast.error('Не удалось загрузить статистику');
+      });
+  }, []);
+
+  if (error) {
+    return <p className="text-sm text-red-500">Не удалось загрузить статистику</p>;
+  }
 
   if (!stats) return (
     <div className="space-y-5 animate-pulse">

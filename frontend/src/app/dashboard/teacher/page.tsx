@@ -27,6 +27,7 @@ export default function TeacherDashboard() {
       api.get<Teacher>('/teachers/me'),
       api.get<Booking[]>('/bookings/teacher'),
     ]).then(([t, b]) => { setTeacher(t); setBookings(b); })
+      .catch(() => toast.error('Не удалось загрузить кабинет'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -98,7 +99,8 @@ export default function TeacherDashboard() {
         </CardHeader>
         <CardContent>
           <p className="text-xs text-[rgb(var(--text-2))] mb-4">
-            Поделитесь кодом с учеником — он вставит его при регистрации, чтобы автоматически привязаться к вам.
+            Поделитесь кодом с учеником — он введёт его в разделе «Преподаватель»
+            после регистрации, чтобы привязаться к вам.
           </p>
           {teacher?.inviteCode ? (
             <div className="flex items-center gap-2">

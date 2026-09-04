@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import { IsEmail, IsNotEmpty, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class RegisterStudentDto {
@@ -14,6 +15,7 @@ export class RegisterStudentDto {
 
   @IsOptional()
   @IsString()
+  @Transform(({ value }) => (value === '' ? undefined : value))
   phone?: string;
 
   @IsNotEmpty()

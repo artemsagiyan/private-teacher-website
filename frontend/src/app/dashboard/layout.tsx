@@ -1,20 +1,52 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { DashboardSidebar } from '@/components/layout/dashboard-sidebar';
 import { DashboardHeader } from '@/components/layout/dashboard-header';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+function homeForRole(role?: string) {
+  if (role === 'teacher') return '/dashboard/teacher';
+  if (role === 'admin') return '/dashboard/admin';
+  return '/dashboard/student';
+}
+
+function isAllowedPath(pathname: string, role?: string) {
+  if (pathname.startsWith('/dashboard/lessons')) return true;
+  const home = homeForRole(role);
+  return pathname === home || pathname.startsWith(`${home}/`);
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, fetchMe } = useAuthStore();
+  const pathname = usePathname();
+  const { isAuthenticated, isLoading, fetchMe, user } = useAuthStore();
 
   useEffect(() => {
     fetchMe().then(() => {
-      if (!useAuthStore.getState().isAuthenticated) router.replace('/auth/login');
+      const state = useAuthStore.getState();
+      if (!state.isAuthenticated) {
+        router.replace('/auth/login');
+        return;
+      }
+      const role = state.user?.role;
+      if (role && !isAllowedPath(window.location.pathname, role)) {
+        router.replace(homeForRole(role));
+      }
     });
-  }, []);
+  }, [router, fetchMe]);
+
+  useEffect(() => {
+    if (!user?.role || isLoading) return;
+    if (!isAllowedPath(pathname, user.role)) {
+      router.replace(homeForRole(user.role));
+    }
+  }, [pathname, user?.role, isLoading, router]);
 
   if (isLoading) {
     return (

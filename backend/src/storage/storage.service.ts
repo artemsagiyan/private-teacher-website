@@ -22,6 +22,15 @@ export class StorageService implements OnModuleInit {
     });
   }
 
+  async ping(): Promise<boolean> {
+    try {
+      await this.client.listBuckets();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async onModuleInit() {
     try {
       if (!(await this.client.bucketExists(this.bucket))) {
