@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Calendar, BookOpen, Users, Clock, ArrowRight, Sparkles, Video } from 'lucide-react';
+import { Calendar, BookOpen, Users, Clock, ArrowRight, Sparkles } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,10 +10,12 @@ import { api } from '@/lib/api';
 import { Booking, Teacher } from '@/types';
 import { formatDateTime, fullName } from '@/lib/utils';
 import { canJoinLesson, lessonTypeLabel } from '@/lib/lesson';
+import { useNow } from '@/lib/use-now';
+import { LessonJoinLinks } from '@/components/lesson/lesson-join-links';
 import { toast } from 'sonner';
 
 export default function StudentDashboard() {
-  const router = useRouter();
+  const now = useNow();
   const [upcoming, setUpcoming] = useState<Booking[]>([]);
   const [teacher, setTeacher]   = useState<Teacher | null>(null);
   const [loading, setLoading]   = useState(true);
@@ -94,7 +95,11 @@ export default function StudentDashboard() {
           ) : (
             <div className="space-y-2">
               {upcoming.slice(0, 5).map((booking) => {
-                const join = canJoinLesson(booking.slot.startTime, booking.slot.endTime);
+                const join = canJoinLesson(
+                  booking.slot.startTime,
+                  booking.slot.endTime,
+                  now,
+                );
                 return (
                   <div key={booking.id} className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[rgb(var(--surface-2))] hover:bg-[rgb(var(--border)/0.4)] transition-colors">
                     <div className="flex min-w-0 items-center gap-3">
@@ -108,15 +113,15 @@ export default function StudentDashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex shrink-0 items-center gap-2">
+                    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                       {join ? (
-                        <Button
-                          size="sm"
-                          className="bg-emerald-500 text-white hover:bg-emerald-600"
-                          onClick={() => router.push(`/dashboard/student/lesson/${booking.slotId}`)}
-                        >
-                          <Video className="h-3.5 w-3.5" /> Войти
-                        </Button>
+                        <LessonJoinLinks
+                          role="student"
+                          slotId={booking.slotId}
+                          startTime={booking.slot.startTime}
+                          endTime={booking.slot.endTime}
+                          now={now}
+                        />
                       ) : (
                         <Badge variant="success" dot>Подтверждено</Badge>
                       )}

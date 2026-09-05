@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   BookOpen,
@@ -11,7 +10,6 @@ import {
   FileText,
   Repeat,
   Users,
-  Video,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { CalendarSlot, Booking } from '@/types';
@@ -21,6 +19,8 @@ import {
   canJoinLesson,
   lessonTypeLabel,
 } from '@/lib/lesson';
+import { useNow } from '@/lib/use-now';
+import { LessonJoinLinks } from '@/components/lesson/lesson-join-links';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,7 +34,7 @@ import { SidePanel } from '@/components/calendar/side-panel';
 type Mode = 'my' | 'book';
 
 export default function StudentCalendarPage() {
-  const router = useRouter();
+  const now = useNow();
   const [mode, setMode] = useState<Mode>('my');
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
   const [freeSlots, setFreeSlots] = useState<CalendarSlot[]>([]);
@@ -128,13 +128,6 @@ export default function StudentCalendarPage() {
       ...freeEvents,
     ];
   }, [mode, myBookings, freeSlots]);
-
-  const joinableBooking = selectedBooking
-    ? canJoinLesson(
-        selectedBooking.slot.startTime,
-        selectedBooking.slot.endTime,
-      )
-    : false;
 
   return (
     <div className="space-y-4">
@@ -299,22 +292,15 @@ export default function StudentCalendarPage() {
                   className="text-violet-600 dark:text-violet-400"
                 />
               )}
-              {joinableBooking ? (
-                <Button
-                  className="w-full bg-emerald-500 text-white hover:bg-emerald-600"
-                  onClick={() =>
-                    router.push(
-                      `/dashboard/student/lesson/${selectedBooking.slotId}`,
-                    )
-                  }
-                >
-                  <Video className="h-3.5 w-3.5" /> Войти в урок
-                </Button>
-              ) : (
-                <p className="text-xs text-[rgb(var(--text-3))]">
-                  Войти можно за 30 минут до начала
-                </p>
-              )}
+              <LessonJoinLinks
+                role="student"
+                slotId={selectedBooking.slotId}
+                startTime={selectedBooking.slot.startTime}
+                endTime={selectedBooking.slot.endTime}
+                now={now}
+                layout="stack"
+                showHint
+              />
               <Link
                 href="/dashboard/student/bookings"
                 className="block text-center text-xs text-primary-600 hover:underline dark:text-primary-400"
@@ -357,36 +343,50 @@ export default function StudentCalendarPage() {
                       const join = canJoinLesson(
                         b.slot.startTime,
                         b.slot.endTime,
+                        now,
                       );
                       return (
-                        <button
+                        <div
                           key={b.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedBooking(b);
-                            setSelected(null);
-                          }}
-                          className="flex w-full items-center gap-2.5 rounded-xl bg-[rgb(var(--surface-2))] px-3 py-2.5 text-left transition-colors hover:bg-[rgb(var(--border)/0.35)]"
+                          className="flex w-full flex-col gap-2 rounded-xl bg-[rgb(var(--surface-2))] px-3 py-2.5"
                         >
-                          <div className="icon-blue flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
-                            <Clock className="h-3 w-3 text-white" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-xs font-medium text-[rgb(var(--text))]">
-                              {formatDateTime(b.slot.startTime)}
-                            </p>
-                            {b.isRecurring && (
-                              <p className="flex items-center gap-1 text-[0.65rem] text-violet-500">
-                                <Repeat className="h-2.5 w-2.5" /> Регулярное
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedBooking(b);
+                              setSelected(null);
+                            }}
+                            className="flex w-full items-center gap-2.5 text-left transition-colors"
+                          >
+                            <div className="icon-blue flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
+                              <Clock className="h-3 w-3 text-white" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium text-[rgb(var(--text))]">
+                                {formatDateTime(b.slot.startTime)}
                               </p>
+                              {b.isRecurring && (
+                                <p className="flex items-center gap-1 text-[0.65rem] text-violet-500">
+                                  <Repeat className="h-2.5 w-2.5" /> Регулярное
+                                </p>
+                              )}
+                            </div>
+                            {join && (
+                              <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[0.65rem] font-medium text-emerald-600 dark:text-emerald-400">
+                                Сейчас
+                              </span>
                             )}
-                          </div>
+                          </button>
                           {join && (
-                            <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[0.65rem] font-medium text-emerald-600 dark:text-emerald-400">
-                              Войти
-                            </span>
+                            <LessonJoinLinks
+                              role="student"
+                              slotId={b.slotId}
+                              startTime={b.slot.startTime}
+                              endTime={b.slot.endTime}
+                              now={now}
+                            />
                           )}
-                        </button>
+                        </div>
                       );
                     })}
                   </div>

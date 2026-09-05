@@ -10,12 +10,16 @@ import { Badge } from '@/components/ui/badge';
 import { api } from '@/lib/api';
 import { Teacher, Booking } from '@/types';
 import { formatDateTime, fullName } from '@/lib/utils';
+import { canJoinLesson, isUpcomingOrLive } from '@/lib/lesson';
+import { useNow } from '@/lib/use-now';
+import { LessonJoinLinks } from '@/components/lesson/lesson-join-links';
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={`skeleton ${className}`} />;
 }
 
 export default function TeacherDashboard() {
+  const now = useNow();
   const [teacher, setTeacher]       = useState<Teacher | null>(null);
   const [bookings, setBookings]     = useState<Booking[]>([]);
   const [copied, setCopied]         = useState(false);
@@ -31,9 +35,17 @@ export default function TeacherDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  const upcoming = bookings.filter(
-    (b) => b.status === 'confirmed' && new Date(b.slot.startTime) > new Date(),
-  );
+  const upcoming = bookings
+    .filter(
+      (b) =>
+        b.status === 'confirmed' &&
+        isUpcomingOrLive(b.slot.startTime, b.slot.endTime, now),
+    )
+    .sort(
+      (a, b) =>
+        new Date(a.slot.startTime).getTime() -
+        new Date(b.slot.startTime).getTime(),
+    );
 
   const generateCode = async () => {
     setGenerating(true);
@@ -145,20 +157,35 @@ export default function TeacherDashboard() {
             </div>
           ) : (
             <div className="space-y-2">
-              {upcoming.slice(0, 5).map((b) => (
-                <div key={b.id} className="flex items-center justify-between p-3 rounded-xl bg-[rgb(var(--surface-2))] hover:bg-[rgb(var(--border)/0.3)] transition-colors">
-                  <div className="flex items-center gap-3">
+              {upcoming.slice(0, 5).map((b) => {
+                const join = canJoinLesson(b.slot.startTime, b.slot.endTime, now);
+                return (
+                <div key={b.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[rgb(var(--surface-2))] hover:bg-[rgb(var(--border)/0.3)] transition-colors">
+                  <div className="flex min-w-0 items-center gap-3">
                     <div className="h-8 w-8 rounded-lg icon-blue flex items-center justify-center shrink-0">
                       <Clock className="h-4 w-4 text-white" />
                     </div>
-                    <div>
+                    <div className="min-w-0">
                       <p className="text-sm font-medium text-[rgb(var(--text))]">{formatDateTime(b.slot.startTime)}</p>
                       <p className="text-xs text-[rgb(var(--text-2))]">{fullName(b.student?.user) || 'Ученик'}</p>
                     </div>
                   </div>
-                  <Badge variant="success" dot>Подтверждено</Badge>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    {join ? (
+                      <LessonJoinLinks
+                        role="teacher"
+                        slotId={b.slotId}
+                        startTime={b.slot.startTime}
+                        endTime={b.slot.endTime}
+                        now={now}
+                      />
+                    ) : (
+                      <Badge variant="success" dot>Подтверждено</Badge>
+                    )}
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </CardContent>

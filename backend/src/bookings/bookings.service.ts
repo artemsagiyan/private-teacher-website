@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
@@ -27,6 +28,7 @@ export class BookingsService {
     @InjectDataSource()
     private dataSource: DataSource,
     private notificationsService: NotificationsService,
+    private config: ConfigService,
   ) {}
 
   async createBooking(
@@ -244,7 +246,16 @@ export class BookingsService {
       where: { studentId: student.id, status: BookingStatus.CONFIRMED },
       relations: ['slot'],
     });
-    return bookings.filter((b) => b.slot.startTime > new Date());
+    const lateMs =
+      (this.config.get<number>('livekit.joinLateMinutes') ?? 120) * 60_000;
+    const cutoff = Date.now() - lateMs;
+    return bookings
+      .filter((b) => new Date(b.slot.endTime).getTime() >= cutoff)
+      .sort(
+        (a, b) =>
+          new Date(a.slot.startTime).getTime() -
+          new Date(b.slot.startTime).getTime(),
+      );
   }
 
   async getTeacherBookings(teacherUserId: string) {

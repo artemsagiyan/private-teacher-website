@@ -1,12 +1,47 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { LessonRoom } from '@/components/lesson/lesson-room';
+import { parseLessonViewMode } from '@/lib/lesson';
 import type { LessonStatus } from '@/types';
+
+function Loading() {
+  return (
+    <div className="flex h-[calc(100vh-56px)] items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
+    </div>
+  );
+}
+
+function StudentLessonRoom({
+  token,
+  livekitUrl,
+  lessonId,
+  lessonStatus,
+}: {
+  token: string;
+  livekitUrl: string;
+  lessonId: string;
+  lessonStatus: LessonStatus;
+}) {
+  const searchParams = useSearchParams();
+  return (
+    <LessonRoom
+      token={token}
+      livekitUrl={livekitUrl}
+      lessonId={lessonId}
+      initialStatus={lessonStatus}
+      isTeacher={false}
+      backHref="/dashboard/student/bookings"
+      title="Урок"
+      initialViewMode={parseLessonViewMode(searchParams.get('view'))}
+    />
+  );
+}
 
 export default function StudentLessonPage() {
   const { slotId } = useParams<{ slotId: string }>();
@@ -36,25 +71,17 @@ export default function StudentLessonPage() {
       .finally(() => setLoading(false));
   }, [slotId, router]);
 
-  if (loading) {
-    return (
-      <div className="flex h-[calc(100vh-56px)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary-500" />
-      </div>
-    );
-  }
-
+  if (loading) return <Loading />;
   if (!connection) return null;
 
   return (
-    <LessonRoom
-      token={connection.token}
-      livekitUrl={livekitUrl}
-      lessonId={connection.lessonId}
-      initialStatus={connection.lessonStatus}
-      isTeacher={false}
-      backHref="/dashboard/student/bookings"
-      title="Урок"
-    />
+    <Suspense fallback={<Loading />}>
+      <StudentLessonRoom
+        token={connection.token}
+        livekitUrl={livekitUrl}
+        lessonId={connection.lessonId}
+        lessonStatus={connection.lessonStatus}
+      />
+    </Suspense>
   );
 }

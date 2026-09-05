@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import type { DateSelectArg } from '@fullcalendar/core';
 import { toast } from 'sonner';
 import {
@@ -12,7 +11,6 @@ import {
   Repeat,
   Trash2,
   Users,
-  Video,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { CalendarSlot, LessonType } from '@/types';
@@ -26,6 +24,8 @@ import {
   lessonTypeLabel,
   slotStatusLabel,
 } from '@/lib/lesson';
+import { useNow } from '@/lib/use-now';
+import { LessonJoinLinks } from '@/components/lesson/lesson-join-links';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -83,7 +83,7 @@ function generateTimeSlots(
 }
 
 export default function TeacherCalendarPage() {
-  const router = useRouter();
+  const now = useNow();
   const [slots, setSlots] = useState<CalendarSlot[]>([]);
   const [selected, setSelected] = useState<CalendarSlot | null>(null);
   const [creating, setCreating] = useState(false);
@@ -215,7 +215,7 @@ export default function TeacherCalendarPage() {
   const joinable =
     selected &&
     selected.status !== 'cancelled' &&
-    canJoinLesson(selected.startTime, selected.endTime);
+    canJoinLesson(selected.startTime, selected.endTime, now);
 
   return (
     <div className="space-y-5">
@@ -572,16 +572,16 @@ export default function TeacherCalendarPage() {
                 )}
               </div>
 
-              {joinable && (
-                <Button
-                  className="w-full bg-emerald-500 text-white hover:bg-emerald-600"
-                  size="sm"
-                  onClick={() =>
-                    router.push(`/dashboard/teacher/lesson/${selected.id}`)
-                  }
-                >
-                  <Video className="h-3.5 w-3.5" /> Войти в урок
-                </Button>
+              {selected.status !== 'cancelled' && (
+                <LessonJoinLinks
+                  role="teacher"
+                  slotId={selected.id}
+                  startTime={selected.startTime}
+                  endTime={selected.endTime}
+                  now={now}
+                  layout="stack"
+                  showHint={!joinable}
+                />
               )}
 
               {selected.status === 'available' && (

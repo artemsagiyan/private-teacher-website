@@ -2,13 +2,19 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { BookOpen, X, Clock, Calendar, Repeat, Video, Plus } from 'lucide-react';
+import { BookOpen, X, Clock, Calendar, Repeat, Plus } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Booking } from '@/types';
 import { formatDateTime, cn } from '@/lib/utils';
-import { canCancelBooking, canJoinLesson, lessonTypeLabel } from '@/lib/lesson';
+import {
+  canCancelBooking,
+  canJoinLesson,
+  isUpcomingOrLive,
+  lessonTypeLabel,
+} from '@/lib/lesson';
+import { useNow } from '@/lib/use-now';
+import { LessonJoinLinks } from '@/components/lesson/lesson-join-links';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +28,7 @@ const statusCfg: Record<string, { label: string; variant: any }> = {
 };
 
 export default function StudentBookingsPage() {
+  const now = useNow();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -68,7 +75,8 @@ export default function StudentBookingsPage() {
 
   const upcoming = bookings.filter(
     (b) =>
-      b.status === 'confirmed' && new Date(b.slot.startTime) > new Date(),
+      b.status === 'confirmed' &&
+      isUpcomingOrLive(b.slot.startTime, b.slot.endTime, now),
   );
   const history = bookings.filter((b) => !upcoming.includes(b));
 
@@ -116,6 +124,7 @@ export default function StudentBookingsPage() {
                 <BookingRow
                   key={b.id}
                   booking={b}
+                  now={now}
                   onCancel={(series) => handleCancel(b.id, series)}
                   showCancel
                 />
@@ -143,7 +152,7 @@ export default function StudentBookingsPage() {
           ) : (
             <div className="space-y-2">
               {history.map((b) => (
-                <BookingRow key={b.id} booking={b} />
+                <BookingRow key={b.id} booking={b} now={now} />
               ))}
             </div>
           )}
@@ -155,14 +164,15 @@ export default function StudentBookingsPage() {
 
 function BookingRow({
   booking,
+  now,
   onCancel,
   showCancel,
 }: {
   booking: Booking;
+  now: number;
   onCancel?: (cancelSeries: boolean) => void;
   showCancel?: boolean;
 }) {
-  const router = useRouter();
   const cfg = statusCfg[booking.status] ?? {
     label: booking.status,
     variant: 'secondary',
@@ -170,10 +180,10 @@ function BookingRow({
   const canCancel =
     showCancel &&
     booking.status === 'confirmed' &&
-    canCancelBooking(booking.slot.startTime);
+    canCancelBooking(booking.slot.startTime, now);
   const canJoin =
     booking.status === 'confirmed' &&
-    canJoinLesson(booking.slot.startTime, booking.slot.endTime);
+    canJoinLesson(booking.slot.startTime, booking.slot.endTime, now);
 
   return (
     <div
@@ -214,16 +224,13 @@ function BookingRow({
           {cfg.label}
         </Badge>
         {canJoin && (
-          <button
-            type="button"
-            onClick={() =>
-              router.push(`/dashboard/student/lesson/${booking.slotId}`)
-            }
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-600"
-          >
-            <Video className="h-3.5 w-3.5" />
-            Войти
-          </button>
+          <LessonJoinLinks
+            role="student"
+            slotId={booking.slotId}
+            startTime={booking.slot.startTime}
+            endTime={booking.slot.endTime}
+            now={now}
+          />
         )}
         {canCancel && (
           <div className="flex gap-1">

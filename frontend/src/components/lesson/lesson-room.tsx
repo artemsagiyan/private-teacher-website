@@ -1026,6 +1026,7 @@ interface LessonRoomProps {
   isTeacher: boolean;
   backHref: string;
   title: string;
+  initialViewMode?: ViewMode;
 }
 
 const LESSON_STATUS: Record<
@@ -1070,9 +1071,10 @@ export function LessonRoom({
   isTeacher,
   backHref,
   title,
+  initialViewMode = 'split',
 }: LessonRoomProps) {
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<ViewMode>('split');
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode);
   const [lessonStatus, setLessonStatus] =
     useState<LessonStatus>(initialStatus);
   const [endingLesson, setEndingLesson] = useState(false);

@@ -10,6 +10,8 @@ export const CAL_SLOT_MAX = '22:00:00';
 export const CAL_HOURS_START = 8;
 export const CAL_HOURS_END = 22;
 
+export type LessonViewMode = 'video' | 'split' | 'board';
+
 export function canJoinLesson(
   startTime: string | Date,
   endTime: string | Date,
@@ -18,6 +20,23 @@ export function canJoinLesson(
   const start = new Date(startTime).getTime();
   const end = new Date(endTime).getTime();
   return now >= start - LESSON_JOIN_EARLY_MS && now <= end + LESSON_JOIN_LATE_MS;
+}
+
+/** Confirmed lesson is still relevant: not ended, or still inside the late join window. */
+export function isUpcomingOrLive(
+  startTime: string | Date,
+  endTime: string | Date,
+  now = Date.now(),
+) {
+  void startTime;
+  return now <= new Date(endTime).getTime() + LESSON_JOIN_LATE_MS;
+}
+
+export function parseLessonViewMode(
+  value: string | null | undefined,
+): LessonViewMode {
+  if (value === 'video' || value === 'board') return value;
+  return 'split';
 }
 
 export function canCancelBooking(startTime: string | Date, now = Date.now()) {
