@@ -420,7 +420,7 @@ export class NotificationsService {
   private wrapHtml(title: string, body: string) {
     return `<!DOCTYPE html><html><body style="font-family:sans-serif;color:#111">
       <h2>${title}</h2>${body}
-      <p style="color:#666;font-size:12px">TutorPlatform · easyphys.ru</p>
+      <p style="color:#666;font-size:12px">ТвойМатПлан · easyphys.ru</p>
     </body></html>`;
   }
 

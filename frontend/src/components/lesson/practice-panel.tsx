@@ -60,7 +60,7 @@ export function PracticePanel({ lessonId }: { lessonId: string }) {
         Что решать
       </button>
       {open && (
-        <div className="absolute right-0 top-9 z-30 w-[min(24rem,80vw)] rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4 shadow-card">
+        <div className="absolute right-0 top-9 z-30 w-[min(24rem,80vw)] overflow-hidden rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-[rgb(var(--text))]">

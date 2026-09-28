@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { GraduationCap } from 'lucide-react';
+import { Wordmark } from '@/components/layout/wordmark';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -49,28 +49,23 @@ export default function LoginPage() {
     <div className="min-h-screen flex bg-[rgb(var(--bg))]">
       {/* Left decorative panel */}
       <div
-        className="hidden lg:flex lg:w-[420px] xl:w-[480px] relative flex-col justify-between p-10 overflow-hidden bg-[rgb(var(--sidebar-bg))]"
+        className="hidden lg:flex lg:w-[420px] xl:w-[480px] relative flex-col justify-between bg-primary-600 p-10 text-white"
       >
-        <div className="absolute inset-0 bg-grid-pattern-dark bg-[size:28px_28px]" />
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-radial from-primary-600/20 via-violet-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10">
+        <div>
           <Link href="/" className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl icon-blue flex items-center justify-center shadow-glow">
-              <GraduationCap className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-white/90">TutorPlatform</span>
+            <img src="/swan.png" alt="" className="h-10 w-10 object-contain" />
+            <Wordmark light className="text-lg" />
           </Link>
         </div>
 
-        <div className="relative z-10 space-y-5">
+        <div className="space-y-5">
           {[
             { title: 'Занятия в удобное время', desc: 'Гибкое расписание без лишних согласований' },
             { title: 'Уведомления автоматически', desc: 'Напоминания о занятии за 24 часа и за 1 час' },
             { title: 'Всё в одном месте', desc: 'История, расписание и связь с преподавателем' },
           ].map((item) => (
             <div key={item.title} className="flex items-start gap-3">
-              <div className="h-5 w-5 rounded-full icon-blue flex items-center justify-center shrink-0 mt-0.5">
+              <div className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20">
                 <span className="text-[10px] text-white font-bold">✓</span>
               </div>
               <div>
@@ -81,7 +76,7 @@ export default function LoginPage() {
           ))}
         </div>
 
-        <p className="relative z-10 text-xs text-white/25">© {new Date().getFullYear()} TutorPlatform</p>
+        <p className="text-xs text-white/70">© {new Date().getFullYear()} ТвойМатПлан</p>
       </div>
 
       {/* Right form panel */}
@@ -89,10 +84,8 @@ export default function LoginPage() {
         <div className="w-full max-w-sm animate-fade-in">
           <div className="lg:hidden flex justify-center mb-8">
             <Link href="/" className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-xl icon-blue flex items-center justify-center shadow-glow">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
-              <span className="font-bold text-[rgb(var(--text))]">TutorPlatform</span>
+              <img src="/swan.png" alt="" className="h-10 w-10 object-contain" />
+              <Wordmark className="text-lg" />
             </Link>
           </div>
 

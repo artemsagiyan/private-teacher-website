@@ -7,7 +7,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { GraduationCap, Users, BookOpen } from 'lucide-react';
+import { Users, BookOpen } from 'lucide-react';
+import { Wordmark } from '@/components/layout/wordmark';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -74,13 +75,11 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-5 bg-[rgb(var(--bg))]">
-        <div className="w-full max-w-md animate-fade-in rounded-3xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-6 shadow-card sm:p-8">
+        <div className="w-full max-w-md animate-fade-in rounded-lg bg-[rgb(var(--surface))] p-6 shadow-card sm:p-8">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-6">
-            <div className="h-8 w-8 rounded-xl icon-blue flex items-center justify-center shadow-glow">
-              <GraduationCap className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-[rgb(var(--text))]">TutorPlatform</span>
+            <img src="/swan.png" alt="" className="h-10 w-10 object-contain" />
+            <Wordmark className="text-lg" />
           </Link>
           <h1 className="text-4xl text-[rgb(var(--text))]">Создать аккаунт</h1>
           <p className="text-sm text-[rgb(var(--text-2))] mt-1.5">

@@ -11,16 +11,16 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          50:  '#f3f7f6',
-          100: '#e3eeeb',
-          200: '#c5dbd6',
-          300: '#96bfb7',
-          400: '#5d9c93',
-          500: '#2f7d73',
-          600: '#14635c',
-          700: '#114e49',
-          800: '#123f3b',
-          900: '#123330',
+          50:  '#F6EDFF',
+          100: '#EADDFF',
+          200: '#D0BCFF',
+          300: '#B69DF8',
+          400: '#9A82DB',
+          500: '#7F67BE',
+          600: '#6750A4',
+          700: '#4F378B',
+          800: '#381E72',
+          900: '#21005D',
         },
         violet: {
           400: '#a78bfa',
@@ -34,9 +34,14 @@ const config: Config = {
           dark2: '#13131f',
         },
       },
+      borderRadius: {
+        xl: '8px',
+        '2xl': '8px',
+        '3xl': '8px',
+      },
       fontFamily: {
         sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-        display: ['var(--font-display)', 'Georgia', 'serif'],
+        serif: ['Georgia', 'Palatino', 'serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       keyframes: {
@@ -56,10 +61,10 @@ const config: Config = {
         dash: 'dash 1s ease forwards',
       },
       boxShadow: {
-        'glow': '0 10px 30px rgb(20 99 92 / 0.16)',
-        'glow-lg': '0 18px 50px rgb(20 99 92 / 0.18)',
-        'card': '0 1px 2px rgb(28 27 25 / 0.04), 0 12px 32px rgb(28 27 25 / 0.05)',
-        'card-hover': '0 8px 24px rgb(28 27 25 / 0.08)',
+        'glow': '0 1px 3px rgb(0 0 0 / 0.15), 0 1px 2px rgb(0 0 0 / 0.3)',
+        'glow-lg': '0 4px 8px 3px rgb(0 0 0 / 0.15), 0 1px 3px rgb(0 0 0 / 0.3)',
+        'card': '0 1px 2px rgb(0 0 0 / 0.08), 0 2px 6px 2px rgb(103 80 164 / 0.08)',
+        'card-hover': '0 2px 6px 2px rgb(0 0 0 / 0.15)',
         'sidebar': '1px 0 0 0 rgb(255 255 255 / 0.05)',
       },
       backgroundImage: {

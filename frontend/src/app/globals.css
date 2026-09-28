@@ -5,41 +5,41 @@
 /* Design Tokens */
 @layer base {
   :root {
-    --bg:         246 243 237;
-    --surface:    255 253 249;
-    --surface-2:  240 235 227;
-    --border:     226 218 206;
-    --border-sub: 236 230 221;
-    --text:        28  27  25;
-    --text-2:      87  80  72;
-    --text-3:     140 130 120;
-    --primary:     20  99  92;
-    --primary-fg: 255 253 249;
-    --primary-bg:  20  99  92 / 0.08;
-    --success:     47 122  90;
-    --warning:    166 106  42;
-    --danger:     168  62  54;
-    --sidebar-bg:  18  32  30;
-    --sidebar-border: 38 56 52;
+    --bg:         247 242 250;
+    --surface:    255 255 255;
+    --surface-2:  243 237 247;
+    --border:     202 196 208;
+    --border-sub: 231 224 236;
+    --text:        29  27  32;
+    --text-2:      73  69  79;
+    --text-3:     121 116 126;
+    --primary:    103  80 164;
+    --primary-fg: 255 255 255;
+    --primary-bg: 103  80 164 / 0.12;
+    --success:     56 106  32;
+    --warning:    133  80   0;
+    --danger:     179  38  30;
+    --sidebar-bg: 243 237 247;
+    --sidebar-border: 202 196 208;
   }
 
   .dark {
-    --bg:          17  18  17;
-    --surface:     26  28  27;
-    --surface-2:   34  37  35;
-    --border:      52  56  53;
-    --border-sub:  40  43  41;
-    --text:       245 242 236;
-    --text-2:     176 170 160;
-    --text-3:     120 114 106;
-    --primary:     94 184 172;
-    --primary-fg:  17  18  17;
-    --primary-bg:  94 184 172 / 0.12;
-    --success:     110 184 146;
-    --warning:    214 164  96;
-    --danger:     224 140 132;
-    --sidebar-bg:  12  18  17;
-    --sidebar-border: 32 44 41;
+    --bg:          15  17  21;
+    --surface:     22  25  31;
+    --surface-2:   30  34  42;
+    --border:      48  54  66;
+    --border-sub:  38  43  53;
+    --text:       244 246 250;
+    --text-2:     176 182 194;
+    --text-3:     122 129 143;
+    --primary:    77 141 255;
+    --primary-fg:  15  17  21;
+    --primary-bg:  77 141 255 / 0.14;
+    --success:    74 222 128;
+    --warning:    251 191  36;
+    --danger:     248 113 113;
+    --sidebar-bg:  18  20  26;
+    --sidebar-border: 42 47 58;
   }
 
   * {
@@ -58,15 +58,17 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     font-feature-settings: "rlig" 1, "calt" 1;
+      padding-right: 0;
+  }
+
+  @media (min-width: 768px) {
+    body {
+      padding-right: 0;
+    }
   }
 
   ::selection {
-    background-color: rgb(20 99 92 / 0.18);
-  }
-
-  h1, h2, .font-display {
-    font-family: var(--font-display), Georgia, serif;
-    font-feature-settings: "kern" 1;
+    background-color: rgb(103 80 164 / 0.24);
   }
 
   /* Scrollbar */
@@ -90,12 +92,19 @@
     border: 1px solid rgb(var(--border) / 0.5);
   }
 
-  .icon-blue   { background: #14635c; }
-  .icon-violet { background: #1f4b45; }
-  .icon-green  { background: #3d6b4f; }
-  .icon-orange { background: #8a5a2b; }
-  .icon-red    { background: #8f3d3d; }
-  .icon-cyan   { background: #2a5f6e; }
+  .icon-blue   { background: #6750A4; }
+
+  svg.text-primary-400,
+  svg.text-primary-500,
+  svg.text-primary-600,
+  svg.text-primary-700 {
+    color: #6750A4;
+  }
+  .icon-violet { background: #7D5260; }
+  .icon-green  { background: #386A20; }
+  .icon-orange { background: #855000; }
+  .icon-red    { background: #B3261E; }
+  .icon-cyan   { background: #00677D; }
 
   .skeleton {
     background: linear-gradient(90deg,
@@ -120,10 +129,10 @@
 .fc {
   font-family: inherit;
   --fc-border-color:       rgb(var(--border) / 0.7);
-  --fc-today-bg-color:     rgb(20 99 92 / 0.05);
+  --fc-today-bg-color:     rgb(103 80 164 / 0.08);
   --fc-page-bg-color:      transparent;
   --fc-neutral-bg-color:   transparent;
-  --fc-event-bg-color:     #14635c;
+  --fc-event-bg-color:     #6750A4;
   --fc-event-border-color: transparent;
   --fc-event-text-color:   #fff;
   --fc-small-font-size:    0.72rem;
@@ -145,7 +154,7 @@
 
 /* Today column — very faint indigo wash */
 .fc .fc-day-today {
-  background: rgb(20 99 92 / 0.05) !important;
+  background: rgb(103 80 164 / 0.08) !important;
 }
 
 /* Toolbar */
@@ -236,7 +245,7 @@
   border-radius: 50%;
 }
 .cal-daynum.cal-today {
-  background: #14635c;
+  background: #6750A4;
   color: #fff !important;
   font-weight: 600 !important;
 }
@@ -327,7 +336,7 @@
   color: rgb(var(--text));
 }
 .fc .fc-popover-close { color: rgb(var(--text-2)) !important; opacity: 1 !important; }
-.fc .fc-more-link     { color: #14635c !important; font-size: 0.75rem !important; font-weight: 500; }
+.fc .fc-more-link     { color: #6750A4 !important; font-size: 0.75rem !important; font-weight: 500; }
 
 /* Lesson room: narrow video dock beside whiteboard */
 .lesson-video-dock {

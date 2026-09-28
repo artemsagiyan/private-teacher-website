@@ -38,11 +38,8 @@ test.describe.configure({ mode: 'serial' });
 test('публичные страницы открываются', async ({ page }) => {
   await page.goto('/');
   await expect(
-    page.getByRole('heading', { name: /Занятие, расписание и отчёт/ }),
+    page.getByRole('heading', { name: /Урок, доска и отчёт родителям/ }),
   ).toBeVisible();
-  await page.getByRole('button', { name: /18:00/ }).click();
-  await expect(page.getByText('Вы записаны на 18:00')).toBeVisible();
-
   await page.goto('/contacts');
   await expect(page.getByRole('heading', { name: 'Контакты' })).toBeVisible();
   await expect(page.getByRole('link', { name: /hello@easyphys.ru/ })).toBeVisible();

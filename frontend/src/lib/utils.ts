@@ -26,7 +26,7 @@ export function timeAgo(date: string | Date) {
 export function getSlotColor(status: string) {
   switch (status) {
     case 'available': return '#10b981';
-    case 'booked':    return '#14635c';
+    case 'booked':    return '#157a45';
     case 'cancelled': return '#ef4444';
     default:          return '#6b7280';
   }

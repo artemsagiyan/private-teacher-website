@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
-import { GraduationCap } from 'lucide-react';
+import { Wordmark } from '@/components/layout/wordmark';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
@@ -55,10 +55,8 @@ function ResetInner() {
     <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--bg))] p-6">
       <div className="w-full max-w-sm">
         <Link href="/" className="flex items-center gap-2.5 justify-center mb-8">
-          <div className="h-8 w-8 rounded-xl icon-blue flex items-center justify-center">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
-          <span className="font-bold text-[rgb(var(--text))]">TutorPlatform</span>
+          <img src="/swan.png" alt="" className="h-10 w-10 object-contain" />
+          <Wordmark className="text-lg" />
         </Link>
         <h1 className="text-2xl font-bold text-[rgb(var(--text))] mb-6">
           Новый пароль

@@ -2,34 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTheme } from 'next-themes';
-import { Menu, Sun, Moon, LogOut, X, Bell } from 'lucide-react';
+import { Menu, LogOut, X, Bell } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { DashboardSidebar } from './dashboard-sidebar';
 import { api } from '@/lib/api';
 import Link from 'next/link';
-
-function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  return (
-    <button
-      type="button"
-      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-      className={cn(
-        'relative flex h-8 w-8 items-center justify-center rounded-lg',
-        'text-[rgb(var(--text-2))] hover:text-[rgb(var(--text))]',
-        'transition-all duration-150 hover:bg-[rgb(var(--surface-2))]',
-      )}
-      title="Переключить тему"
-      aria-label="Переключить тему"
-    >
-      <Sun className="absolute h-4 w-4 scale-100 opacity-100 transition-all dark:scale-50 dark:opacity-0" />
-      <Moon className="absolute h-4 w-4 scale-50 opacity-0 transition-all dark:scale-100 dark:opacity-100" />
-    </button>
-  );
-}
 
 export function DashboardHeader() {
   const { user, logout } = useAuthStore();
@@ -116,7 +95,6 @@ export function DashboardHeader() {
               </span>
             )}
           </Link>
-          <ThemeToggle />
           <button
             type="button"
             onClick={handleLogout}
@@ -146,7 +124,7 @@ export function DashboardHeader() {
               <button
                 type="button"
                 onClick={() => setMenuOpen(false)}
-                className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-white/70 hover:bg-white/10 hover:text-white"
+                className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-[rgb(var(--text-2))] hover:bg-[rgb(var(--surface-2))]"
                 aria-label="Закрыть"
               >
                 <X className="h-4 w-4" />

@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GraduationCap, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth.store';
 import { isNavActive, navForRole, roleLabel, type NavItem } from './nav';
+import { Wordmark } from '@/components/layout/wordmark';
 import { UserAvatar } from './user-avatar';
 
 export function DashboardSidebar({
@@ -35,12 +35,8 @@ export function DashboardSidebar({
           onClick={onNavigate}
           className="group flex items-center gap-2.5"
         >
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-500">
-            <GraduationCap className="h-4 w-4 text-white" />
-          </div>
-          <span className="font-display text-base leading-none text-white/90 transition-colors group-hover:text-white">
-            TutorPlatform
-          </span>
+          <img src="/swan.png" alt="" className="h-8 w-8 shrink-0 object-contain" />
+          <Wordmark className="text-base" />
         </Link>
       </div>
 
@@ -60,15 +56,15 @@ export function DashboardSidebar({
       <div className="mx-4 h-px bg-[rgb(var(--sidebar-border))]" />
 
       <div className="p-3">
-        <div className="flex cursor-default items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-white/5">
-          <div className="icon-violet flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg text-[0.65rem] font-bold text-white">
+        <div className="flex cursor-default items-center gap-3 rounded-xl px-3 py-2.5">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-600 text-[0.65rem] font-bold text-white">
             <UserAvatar className="h-full w-full object-cover" fallback={initials || '?'} />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-[0.78rem] font-medium text-white/80">
+            <p className="truncate text-sm font-semibold text-[rgb(var(--text))]">
               {user?.firstName} {user?.lastName}
             </p>
-            <p className="truncate text-[0.68rem] text-white/35">
+            <p className="truncate text-xs text-[rgb(var(--text-3))]">
               {roleLabel[user?.role ?? ''] ?? user?.role}
             </p>
           </div>
@@ -92,25 +88,19 @@ function NavLink({
       href={item.href}
       onClick={onNavigate}
       className={cn(
-        'group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[0.82rem] font-medium transition-all duration-150',
+        'flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
         active
-          ? 'bg-white/10 text-white'
-          : 'text-white/45 hover:bg-white/5 hover:text-white/80',
+          ? 'bg-[#E8DEF8] text-[#1D192B]'
+          : 'text-[rgb(var(--text-2))] hover:bg-[#E7E0EC] hover:text-[rgb(var(--text))]',
       )}
     >
-      {active && (
-        <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary-400" />
-      )}
       <item.icon
         className={cn(
-          'h-4 w-4 shrink-0 transition-colors',
-          active
-            ? 'text-primary-400'
-            : 'text-white/35 group-hover:text-white/60',
+          'h-4 w-4 shrink-0',
+          active ? 'text-[#1D192B]' : 'text-[rgb(var(--text-3))]',
         )}
       />
       <span className="truncate">{item.label}</span>
-      {active && <ChevronRight className="ml-auto h-3 w-3 text-white/30" />}
     </Link>
   );
 }

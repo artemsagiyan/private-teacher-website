@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test';
 
-test('главная реагирует на запись в демо-слот', async ({ page }) => {
+test('главная открывается', async ({ page }) => {
   await page.goto('/');
   await expect(
-    page.getByRole('heading', { name: /Занятие, расписание и отчёт/ }),
+    page.getByRole('heading', { name: /Урок, доска и отчёт родителям/ }),
   ).toBeVisible();
-  await page.getByRole('button', { name: /18:00/ }).click();
-  await expect(page.getByText('Вы записаны на 18:00')).toBeVisible();
+  await page.getByRole('button', { name: 'Сколько длится занятие?' }).click();
+  await expect(page.getByText(/Обычный слот — один час/)).toBeVisible();
 });
 
 test('преподаватель входит и открывает кабинет', async ({ page }) => {

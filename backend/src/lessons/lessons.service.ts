@@ -228,7 +228,7 @@ export class LessonsService {
     const normalized = {
       type: 'excalidraw',
       version: 2,
-      source: 'TutorPlatform',
+      source: 'ТвойМатПлан',
       revision: nextRevision,
       clientId:
         typeof scene.clientId === 'string' ? scene.clientId : undefined,
@@ -285,7 +285,7 @@ export class LessonsService {
       return {
         type: 'excalidraw',
         version: 2,
-        source: 'TutorPlatform',
+        source: 'ТвойМатПлан',
         elements: [],
         appState: {},
         files: {},

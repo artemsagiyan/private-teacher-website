@@ -93,7 +93,7 @@ export default function StudentCalendarPage() {
         b.slot.lessonType === 'individual' ? 'Моё занятие' : 'Групповое',
       start: b.slot.startTime,
       end: b.slot.endTime,
-      backgroundColor: '#14635c',
+      backgroundColor: '#6750A4',
       borderColor: 'transparent',
       textColor: '#fff',
       classNames: ['my-booking-event'],
@@ -122,7 +122,7 @@ export default function StudentCalendarPage() {
     return [
       ...myEvents.map((e) => ({
         ...e,
-        backgroundColor: '#2f7d73',
+        backgroundColor: '#5cb886',
         classNames: ['my-booking-dim'],
       })),
       ...freeEvents,
@@ -192,7 +192,7 @@ export default function StudentCalendarPage() {
         <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           <CalendarLegend
             items={[
-              { color: '#14635c', label: 'Моё занятие', glow: true },
+              { color: '#6750A4', label: 'Моё занятие', glow: true },
               ...(mode === 'book'
                 ? [{ color: '#10b981', label: 'Свободный слот' }]
                 : []),

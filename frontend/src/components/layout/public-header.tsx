@@ -2,25 +2,19 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useTheme } from 'next-themes';
-import { Sun, Moon, GraduationCap, Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Wordmark } from '@/components/layout/wordmark';
 
 export function PublicHeader() {
-  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 glass border-b border-[rgb(var(--border)/0.6)]">
-      <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="h-8 w-8 rounded-lg bg-primary-700 flex items-center justify-center">
-            <GraduationCap className="h-4 w-4 text-white" />
-          </div>
-          <span className="font-display text-lg leading-none text-[rgb(var(--text))]">
-            TutorPlatform
-          </span>
+    <header className="sticky top-0 z-50 bg-[#FEF7FF]/90 shadow-[0_1px_2px_rgba(0,0,0,0.08)] backdrop-blur">
+      <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-5">
+        <Link href="/" className="flex items-center gap-2.5">
+          <img src="/swan.png" alt="" className="h-10 w-10 object-contain" />
+          <Wordmark className="text-lg" />
         </Link>
 
         <nav className="hidden md:flex items-center gap-6 text-sm text-[rgb(var(--text-2))]">
@@ -38,19 +32,6 @@ export function PublicHeader() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            aria-label="Переключить тему"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className={cn(
-              'h-8 w-8 rounded-lg flex items-center justify-center relative',
-              'text-[rgb(var(--text-2))] hover:text-[rgb(var(--text))]',
-              'hover:bg-[rgb(var(--surface-2))] transition-all',
-            )}
-          >
-            <Sun className="h-4 w-4 absolute dark:opacity-0 dark:scale-50 transition-all" />
-            <Moon className="h-4 w-4 absolute opacity-0 scale-50 dark:opacity-100 dark:scale-100 transition-all" />
-          </button>
-          <button
-            type="button"
             className="md:hidden h-8 w-8 rounded-lg flex items-center justify-center text-[rgb(var(--text-2))]"
             aria-label="Открыть меню"
             onClick={() => setOpen(true)}
@@ -63,7 +44,7 @@ export function PublicHeader() {
             </Button>
           </Link>
           <Link href="/auth/register" className="hidden sm:block">
-            <Button size="sm">Начать</Button>
+            <Button size="sm">Записаться</Button>
           </Link>
         </div>
       </div>
