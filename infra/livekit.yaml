@@ -1,15 +1,15 @@
-port: 7880
+port: 7890
 
 rtc:
-  tcp_port: 7881
-  udp_port: 7882
+  tcp_port: 7891
+  udp_port: 7892
   use_external_ip: false
 
 redis:
   address: redis:6379
 
 keys:
-  devkey: devsecret1234567890abcdef
+  devkey: tutor-dev-livekit-secret-key-32chars
 
 webhook:
   api_key: devkey

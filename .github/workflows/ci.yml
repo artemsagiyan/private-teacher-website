@@ -20,4 +20,4 @@ jobs:
       - run: npm run build --workspace=frontend
         env:
           NEXT_PUBLIC_API_URL: http://localhost:3001
-          NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7880
+          NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7890

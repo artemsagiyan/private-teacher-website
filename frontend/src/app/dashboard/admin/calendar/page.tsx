@@ -89,7 +89,7 @@ export default function AdminCalendarPage() {
           <CalendarLegend
             items={[
               { color: '#10b981', label: 'Свободно' },
-              { color: '#6366f1', label: 'Занято' },
+              { color: '#14635c', label: 'Занято' },
               { color: '#ef4444', label: 'Отменено' },
             ]}
             showRecurringHint

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { DashboardSidebar } from '@/components/layout/dashboard-sidebar';
@@ -26,9 +26,11 @@ export default function DashboardLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { isAuthenticated, isLoading, fetchMe, user } = useAuthStore();
+  const [booting, setBooting] = useState(true);
 
   useEffect(() => {
-    fetchMe().then(() => {
+    fetchMe()
+      .then(() => {
       const state = useAuthStore.getState();
       if (!state.isAuthenticated) {
         router.replace('/auth/login');
@@ -38,7 +40,8 @@ export default function DashboardLayout({
       if (role && !isAllowedPath(window.location.pathname, role)) {
         router.replace(homeForRole(role));
       }
-    });
+    })
+      .finally(() => setBooting(false));
   }, [router, fetchMe]);
 
   useEffect(() => {
@@ -48,7 +51,7 @@ export default function DashboardLayout({
     }
   }, [pathname, user?.role, isLoading, router]);
 
-  if (isLoading) {
+  if (booting || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--bg))]">
         <div className="flex flex-col items-center gap-3">

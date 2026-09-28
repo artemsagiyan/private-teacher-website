@@ -9,7 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import { LessThan, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { UserRole } from '../users/enums/user-role.enum';
@@ -45,25 +45,31 @@ export class AuthService {
     if (dto.password !== dto.passwordConfirm) {
       throw new BadRequestException('Пароли не совпадают');
     }
-    const exists = await this.userRepository.findOne({
-      where: { email: dto.email },
-    });
-    if (exists) throw new ConflictException('Email уже зарегистрирован');
-
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = this.userRepository.create({
-      email: dto.email,
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      phone: dto.phone,
-      passwordHash,
-      role: UserRole.STUDENT,
-      isEmailVerified: false,
-    });
-    await this.userRepository.save(user);
+    const user = await this.userRepository.manager.transaction(async (manager) => {
+      const exists = await manager.findOne(User, {
+        where: { email: dto.email },
+      });
+      if (exists) throw new ConflictException('Email уже зарегистрирован');
 
-    const student = this.studentRepository.create({ userId: user.id });
-    await this.studentRepository.save(student);
+      const created = manager.create(User, {
+        email: dto.email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        phone: dto.phone,
+        passwordHash,
+        role: UserRole.STUDENT,
+        isEmailVerified: false,
+      });
+      const saved = await manager.save(created);
+      await manager.save(manager.create(Student, { userId: saved.id }));
+      return saved;
+    }).catch((error) => {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('Email уже зарегистрирован');
+      }
+      throw error;
+    });
 
     try {
       await this.notificationsService.sendWelcomeEmail(
@@ -82,35 +88,42 @@ export class AuthService {
       throw new BadRequestException('Пароли не совпадают');
     }
 
-    const code = await this.registrationCodeRepository.findOne({
-      where: { code: dto.registrationCode, isUsed: false },
-    });
-    if (!code || code.expiresAt < new Date()) {
-      throw new BadRequestException('Код недействителен или истёк');
-    }
-
-    const exists = await this.userRepository.findOne({
-      where: { email: dto.email },
-    });
-    if (exists) throw new ConflictException('Email уже зарегистрирован');
-
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = this.userRepository.create({
-      email: dto.email,
-      firstName: dto.firstName,
-      lastName: dto.lastName,
-      passwordHash,
-      role: UserRole.TEACHER,
-      isEmailVerified: false,
+    const user = await this.userRepository.manager.transaction(async (manager) => {
+      const claim = await manager
+        .createQueryBuilder()
+        .update(RegistrationCode)
+        .set({ isUsed: true, usedByEmail: dto.email })
+        .where('code = :code', { code: dto.registrationCode })
+        .andWhere('"isUsed" = false')
+        .andWhere('"expiresAt" > :now', { now: new Date() })
+        .execute();
+      if (!claim.affected) {
+        throw new BadRequestException('Код недействителен или истёк');
+      }
+
+      const exists = await manager.findOne(User, {
+        where: { email: dto.email },
+      });
+      if (exists) throw new ConflictException('Email уже зарегистрирован');
+
+      const created = manager.create(User, {
+        email: dto.email,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
+        passwordHash,
+        role: UserRole.TEACHER,
+        isEmailVerified: false,
+      });
+      const saved = await manager.save(created);
+      await manager.save(manager.create(Teacher, { userId: saved.id }));
+      return saved;
+    }).catch((error) => {
+      if (isUniqueViolation(error)) {
+        throw new ConflictException('Email уже зарегистрирован');
+      }
+      throw error;
     });
-    await this.userRepository.save(user);
-
-    const teacher = this.teacherRepository.create({ userId: user.id });
-    await this.teacherRepository.save(teacher);
-
-    code.isUsed = true;
-    code.usedByEmail = user.email;
-    await this.registrationCodeRepository.save(code);
 
     return this.generateTokens(user, true);
   }
@@ -207,7 +220,7 @@ export class AuthService {
     const raw = randomBytes(32).toString('hex');
     const row = this.oauthCodeRepository.create({
       userId,
-      codeHash: await bcrypt.hash(raw, 8),
+      codeHash: sha256(raw),
       expiresAt: new Date(Date.now() + 60_000),
     });
     await this.oauthCodeRepository.save(row);
@@ -215,24 +228,19 @@ export class AuthService {
   }
 
   async exchangeOauthCode(code: string) {
-    const candidates = await this.oauthCodeRepository.find({
-      where: {},
-      order: { createdAt: 'DESC' },
-      take: 20,
-    });
-    let match: OauthCode | null = null;
-    for (const row of candidates) {
-      if (row.expiresAt < new Date()) continue;
-      if (await bcrypt.compare(code, row.codeHash)) {
-        match = row;
-        break;
-      }
-    }
-    if (!match) throw new UnauthorizedException('Код входа недействителен');
-    await this.oauthCodeRepository.delete({ id: match.id });
+    const deleted = await this.oauthCodeRepository
+      .createQueryBuilder()
+      .delete()
+      .from(OauthCode)
+      .where('"codeHash" = :hash', { hash: sha256(code) })
+      .andWhere('"expiresAt" > :now', { now: new Date() })
+      .returning(['userId'])
+      .execute();
+    const userId = deleted.raw?.[0]?.userId as string | undefined;
+    if (!userId) throw new UnauthorizedException('Код входа недействителен');
 
     const user = await this.userRepository.findOne({
-      where: { id: match.userId },
+      where: { id: userId },
       select: [
         'id',
         'email',
@@ -327,12 +335,23 @@ export class AuthService {
     }
     if (!user) throw new BadRequestException('Ссылка недействительна или истекла');
 
-    await this.userRepository.update(user.id, {
-      passwordHash: await bcrypt.hash(password, 12),
-      passwordResetToken: null,
-      passwordResetExpires: null,
-      refreshToken: null,
-    });
+    const updated = await this.userRepository
+      .createQueryBuilder()
+      .update(User)
+      .set({
+        passwordHash: await bcrypt.hash(password, 12),
+        passwordResetToken: null,
+        passwordResetExpires: null,
+        refreshToken: null,
+      })
+      .where('id = :id', { id: user.id })
+      .andWhere('"passwordResetToken" = :token', {
+        token: user.passwordResetToken,
+      })
+      .execute();
+    if (!updated.affected) {
+      throw new BadRequestException('Ссылка недействительна или истекла');
+    }
     return { message: 'Пароль обновлён. Войдите с новым паролем.' };
   }
 
@@ -363,4 +382,17 @@ export class AuthService {
       user: toPublicUser(user, hasPassword),
     };
   }
+}
+
+function sha256(value: string) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+function isUniqueViolation(error: unknown) {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === '23505'
+  );
 }

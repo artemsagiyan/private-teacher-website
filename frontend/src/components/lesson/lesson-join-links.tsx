@@ -21,6 +21,7 @@ export function LessonJoinLinks({
   startTime,
   endTime,
   now = Date.now(),
+  lessonStatus,
   layout = 'inline',
   showHint = false,
   className,
@@ -30,11 +31,12 @@ export function LessonJoinLinks({
   startTime: string | Date;
   endTime: string | Date;
   now?: number;
+  lessonStatus?: string | null;
   layout?: 'inline' | 'stack';
   showHint?: boolean;
   className?: string;
 }) {
-  if (!canJoinLesson(startTime, endTime, now)) {
+  if (!canJoinLesson(startTime, endTime, now, lessonStatus)) {
     if (!showHint) return null;
     return (
       <p className={cn('text-xs text-[rgb(var(--text-3))]', className)}>

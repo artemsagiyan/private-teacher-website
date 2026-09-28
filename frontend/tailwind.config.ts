@@ -11,16 +11,16 @@ const config: Config = {
     extend: {
       colors: {
         primary: {
-          50:  '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
+          50:  '#f3f7f6',
+          100: '#e3eeeb',
+          200: '#c5dbd6',
+          300: '#96bfb7',
+          400: '#5d9c93',
+          500: '#2f7d73',
+          600: '#14635c',
+          700: '#114e49',
+          800: '#123f3b',
+          900: '#123330',
         },
         violet: {
           400: '#a78bfa',
@@ -35,7 +35,8 @@ const config: Config = {
         },
       },
       fontFamily: {
-        sans: ['ui-sans-serif', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+        sans: ['var(--font-sans)', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'Georgia', 'serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       keyframes: {
@@ -44,6 +45,7 @@ const config: Config = {
         'slide-in-left': { from: { opacity: '0', transform: 'translateX(-100%)' }, to: { opacity: '1', transform: 'translateX(0)' } },
         'scale-in': { from: { opacity: '0', transform: 'scale(0.95)' }, to: { opacity: '1', transform: 'scale(1)' } },
         shimmer: { from: { backgroundPosition: '-200% 0' }, to: { backgroundPosition: '200% 0' } },
+        dash: { from: { strokeDashoffset: '220' }, to: { strokeDashoffset: '0' } },
       },
       animation: {
         'fade-in': 'fade-in 0.2s ease-out',
@@ -51,12 +53,13 @@ const config: Config = {
         'slide-in-left': 'slide-in-left 0.22s ease-out',
         'scale-in': 'scale-in 0.15s ease-out',
         shimmer: 'shimmer 2s infinite linear',
+        dash: 'dash 1s ease forwards',
       },
       boxShadow: {
-        'glow': '0 0 20px rgb(99 102 241 / 0.15)',
-        'glow-lg': '0 0 40px rgb(99 102 241 / 0.2)',
-        'card': '0 1px 3px rgb(0 0 0 / 0.04), 0 4px 12px rgb(0 0 0 / 0.06)',
-        'card-hover': '0 4px 12px rgb(0 0 0 / 0.08), 0 12px 32px rgb(0 0 0 / 0.1)',
+        'glow': '0 10px 30px rgb(20 99 92 / 0.16)',
+        'glow-lg': '0 18px 50px rgb(20 99 92 / 0.18)',
+        'card': '0 1px 2px rgb(28 27 25 / 0.04), 0 12px 32px rgb(28 27 25 / 0.05)',
+        'card-hover': '0 8px 24px rgb(28 27 25 / 0.08)',
         'sidebar': '1px 0 0 0 rgb(255 255 255 / 0.05)',
       },
       backgroundImage: {

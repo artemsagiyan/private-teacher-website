@@ -93,7 +93,7 @@ export default function StudentCalendarPage() {
         b.slot.lessonType === 'individual' ? 'Моё занятие' : 'Групповое',
       start: b.slot.startTime,
       end: b.slot.endTime,
-      backgroundColor: '#6366f1',
+      backgroundColor: '#14635c',
       borderColor: 'transparent',
       textColor: '#fff',
       classNames: ['my-booking-event'],
@@ -122,7 +122,7 @@ export default function StudentCalendarPage() {
     return [
       ...myEvents.map((e) => ({
         ...e,
-        backgroundColor: '#818cf8',
+        backgroundColor: '#2f7d73',
         classNames: ['my-booking-dim'],
       })),
       ...freeEvents,
@@ -192,7 +192,7 @@ export default function StudentCalendarPage() {
         <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           <CalendarLegend
             items={[
-              { color: '#6366f1', label: 'Моё занятие', glow: true },
+              { color: '#14635c', label: 'Моё занятие', glow: true },
               ...(mode === 'book'
                 ? [{ color: '#10b981', label: 'Свободный слот' }]
                 : []),
@@ -298,6 +298,7 @@ export default function StudentCalendarPage() {
                 startTime={selectedBooking.slot.startTime}
                 endTime={selectedBooking.slot.endTime}
                 now={now}
+                lessonStatus={selectedBooking.slot.lesson?.status}
                 layout="stack"
                 showHint
               />
@@ -344,6 +345,7 @@ export default function StudentCalendarPage() {
                         b.slot.startTime,
                         b.slot.endTime,
                         now,
+                        b.slot.lesson?.status,
                       );
                       return (
                         <div
@@ -384,6 +386,7 @@ export default function StudentCalendarPage() {
                               startTime={b.slot.startTime}
                               endTime={b.slot.endTime}
                               now={now}
+                              lessonStatus={b.slot.lesson?.status}
                             />
                           )}
                         </div>

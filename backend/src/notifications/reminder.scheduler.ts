@@ -39,9 +39,9 @@ export class ReminderScheduler {
         start >= window24Start &&
         start <= window24End
       ) {
-        await this.notifications.sendReminder24h(userId, start);
-        booking.reminder24hSent = true;
-        await this.bookingRepo.save(booking);
+        await this.claimAndSend(booking.id, 'reminder24hSent', () =>
+          this.notifications.sendReminder24h(userId, start),
+        );
       }
 
       if (
@@ -49,10 +49,32 @@ export class ReminderScheduler {
         start >= window1Start &&
         start <= window1End
       ) {
-        await this.notifications.sendReminder1h(userId, start);
-        booking.reminder1hSent = true;
-        await this.bookingRepo.save(booking);
+        await this.claimAndSend(booking.id, 'reminder1hSent', () =>
+          this.notifications.sendReminder1h(userId, start),
+        );
       }
+    }
+  }
+
+  private async claimAndSend(
+    bookingId: string,
+    flag: 'reminder24hSent' | 'reminder1hSent',
+    send: () => Promise<unknown>,
+  ) {
+    const claimed = await this.bookingRepo.update(
+      { id: bookingId, [flag]: false, status: BookingStatus.CONFIRMED },
+      { [flag]: true },
+    );
+    if (!claimed.affected) return;
+    try {
+      await send();
+    } catch (error) {
+      await this.bookingRepo.update({ id: bookingId }, { [flag]: false });
+      this.logger.warn(
+        `Reminder ${flag} failed for ${bookingId}: ${
+          error instanceof Error ? error.message : error
+        }`,
+      );
     }
   }
 }

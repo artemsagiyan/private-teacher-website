@@ -5,41 +5,41 @@
 /* Design Tokens */
 @layer base {
   :root {
-    --bg:         248 248 255;
-    --surface:    255 255 255;
-    --surface-2:  244 244 252;
-    --border:     226 228 240;
-    --border-sub: 241 242 248;
-    --text:        15  23  42;
-    --text-2:     100 116 139;
-    --text-3:     148 163 184;
-    --primary:     99 102 241;
-    --primary-fg: 255 255 255;
-    --primary-bg:  99 102 241 / 0.08;
-    --success:     16 185 129;
-    --warning:    245 158  11;
-    --danger:     239  68  68;
-    --sidebar-bg: 10  10  20;
-    --sidebar-border: 28 28 46;
+    --bg:         246 243 237;
+    --surface:    255 253 249;
+    --surface-2:  240 235 227;
+    --border:     226 218 206;
+    --border-sub: 236 230 221;
+    --text:        28  27  25;
+    --text-2:      87  80  72;
+    --text-3:     140 130 120;
+    --primary:     20  99  92;
+    --primary-fg: 255 253 249;
+    --primary-bg:  20  99  92 / 0.08;
+    --success:     47 122  90;
+    --warning:    166 106  42;
+    --danger:     168  62  54;
+    --sidebar-bg:  18  32  30;
+    --sidebar-border: 38 56 52;
   }
 
   .dark {
-    --bg:          7   7  15;
-    --surface:    12  12  24;
-    --surface-2:  18  18  34;
-    --border:     30  30  54;
-    --border-sub: 22  22  40;
-    --text:       248 250 252;
-    --text-2:     148 163 184;
-    --text-3:     100 116 139;
-    --primary:    129 140 248;
-    --primary-fg: 255 255 255;
-    --primary-bg: 99 102 241 / 0.12;
-    --success:     52 211 153;
-    --warning:    251 191  36;
-    --danger:     252 165 165;
-    --sidebar-bg: 8   8  18;
-    --sidebar-border: 26 26 44;
+    --bg:          17  18  17;
+    --surface:     26  28  27;
+    --surface-2:   34  37  35;
+    --border:      52  56  53;
+    --border-sub:  40  43  41;
+    --text:       245 242 236;
+    --text-2:     176 170 160;
+    --text-3:     120 114 106;
+    --primary:     94 184 172;
+    --primary-fg:  17  18  17;
+    --primary-bg:  94 184 172 / 0.12;
+    --success:     110 184 146;
+    --warning:    214 164  96;
+    --danger:     224 140 132;
+    --sidebar-bg:  12  18  17;
+    --sidebar-border: 32 44 41;
   }
 
   * {
@@ -61,7 +61,12 @@
   }
 
   ::selection {
-    background-color: rgb(99 102 241 / 0.18);
+    background-color: rgb(20 99 92 / 0.18);
+  }
+
+  h1, h2, .font-display {
+    font-family: var(--font-display), Georgia, serif;
+    font-feature-settings: "kern" 1;
   }
 
   /* Scrollbar */
@@ -76,10 +81,7 @@
   .text-balance { text-wrap: balance; }
 
   .grad-text {
-    background: linear-gradient(135deg, #6366f1 0%, #a78bfa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: rgb(var(--primary));
   }
 
   .glass {
@@ -88,12 +90,12 @@
     border: 1px solid rgb(var(--border) / 0.5);
   }
 
-  .icon-blue   { background: linear-gradient(135deg, #3b82f6, #6366f1); }
-  .icon-violet { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
-  .icon-green  { background: linear-gradient(135deg, #10b981, #34d399); }
-  .icon-orange { background: linear-gradient(135deg, #f59e0b, #fb923c); }
-  .icon-red    { background: linear-gradient(135deg, #ef4444, #f87171); }
-  .icon-cyan   { background: linear-gradient(135deg, #06b6d4, #22d3ee); }
+  .icon-blue   { background: #14635c; }
+  .icon-violet { background: #1f4b45; }
+  .icon-green  { background: #3d6b4f; }
+  .icon-orange { background: #8a5a2b; }
+  .icon-red    { background: #8f3d3d; }
+  .icon-cyan   { background: #2a5f6e; }
 
   .skeleton {
     background: linear-gradient(90deg,
@@ -118,10 +120,10 @@
 .fc {
   font-family: inherit;
   --fc-border-color:       rgb(var(--border) / 0.7);
-  --fc-today-bg-color:     rgb(99 102 241 / 0.04);
+  --fc-today-bg-color:     rgb(20 99 92 / 0.05);
   --fc-page-bg-color:      transparent;
   --fc-neutral-bg-color:   transparent;
-  --fc-event-bg-color:     #6366f1;
+  --fc-event-bg-color:     #14635c;
   --fc-event-border-color: transparent;
   --fc-event-text-color:   #fff;
   --fc-small-font-size:    0.72rem;
@@ -143,7 +145,7 @@
 
 /* Today column — very faint indigo wash */
 .fc .fc-day-today {
-  background: rgb(99 102 241 / 0.04) !important;
+  background: rgb(20 99 92 / 0.05) !important;
 }
 
 /* Toolbar */
@@ -184,9 +186,9 @@
 .fc .fc-button:focus { box-shadow: none !important; outline: none !important; }
 .fc .fc-button-primary:not(:disabled).fc-button-active,
 .fc .fc-button-primary:not(:disabled):active {
-  background: rgb(99 102 241 / 0.1) !important;
-  color: #6366f1 !important;
-  border-color: rgb(99 102 241 / 0.25) !important;
+  background: rgb(var(--primary) / 0.12) !important;
+  color: rgb(var(--primary)) !important;
+  border-color: rgb(var(--primary) / 0.35) !important;
 }
 .fc .fc-button-group .fc-button            { border-radius: 0 !important; }
 .fc .fc-button-group .fc-button:first-child { border-radius: 7px 0 0 7px !important; }
@@ -234,7 +236,7 @@
   border-radius: 50%;
 }
 .cal-daynum.cal-today {
-  background: #6366f1;
+  background: #14635c;
   color: #fff !important;
   font-weight: 600 !important;
 }
@@ -292,7 +294,7 @@
 
 /* Now indicator: red line + filled circle dot */
 .fc .fc-highlight {
-  background: rgb(99 102 241 / 0.14) !important;
+  background: rgb(20 99 92 / 0.14) !important;
 }
 .fc .fc-timegrid-now-indicator-line {
   border-color: #f44336 !important;
@@ -325,7 +327,7 @@
   color: rgb(var(--text));
 }
 .fc .fc-popover-close { color: rgb(var(--text-2)) !important; opacity: 1 !important; }
-.fc .fc-more-link     { color: #6366f1 !important; font-size: 0.75rem !important; font-weight: 500; }
+.fc .fc-more-link     { color: #14635c !important; font-size: 0.75rem !important; font-weight: 500; }
 
 /* Lesson room: narrow video dock beside whiteboard */
 .lesson-video-dock {

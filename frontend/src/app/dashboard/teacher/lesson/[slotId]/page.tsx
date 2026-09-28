@@ -50,20 +50,28 @@ export default function TeacherLessonPage() {
     token: string;
     lessonId: string;
     lessonStatus: LessonStatus;
+    livekitUrl: string;
   } | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const livekitUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL || 'ws://localhost:7880';
 
   useEffect(() => {
     api
       .get<{
         token: string;
+        url?: string;
         room: string;
         lessonId: string;
         lessonStatus: LessonStatus;
       }>(`/video/token?slotId=${slotId}`)
-      .then((data) => setConnection(data))
+      .then((data) =>
+        setConnection({
+          ...data,
+          livekitUrl:
+            data.url ||
+            process.env.NEXT_PUBLIC_LIVEKIT_URL ||
+            'ws://localhost:7890',
+        }),
+      )
       .catch((err) => {
         toast.error(err.response?.data?.message || 'Не удалось получить доступ к уроку');
         router.push('/dashboard/teacher/calendar');
@@ -78,7 +86,7 @@ export default function TeacherLessonPage() {
     <Suspense fallback={<Loading />}>
       <TeacherLessonRoom
         token={connection.token}
-        livekitUrl={livekitUrl}
+        livekitUrl={connection.livekitUrl}
         lessonId={connection.lessonId}
         lessonStatus={connection.lessonStatus}
       />

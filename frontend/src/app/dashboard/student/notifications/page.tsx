@@ -43,12 +43,20 @@ export default function NotificationsPage() {
   }, []);
 
   const markAll = async () => {
-    await api.patch('/notifications/read-all');
-    load();
+    try {
+      await api.patch('/notifications/read-all');
+      await load();
+    } catch {
+      toast.error('Не удалось отметить уведомления');
+    }
   };
   const markOne = async (id: string) => {
-    await api.patch(`/notifications/${id}/read`);
-    load();
+    try {
+      await api.patch(`/notifications/${id}/read`);
+      await load();
+    } catch {
+      toast.error('Не удалось отметить уведомление');
+    }
   };
 
   const unread = notifications.filter((n) => !n.isRead).length;

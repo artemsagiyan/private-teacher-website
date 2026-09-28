@@ -238,9 +238,7 @@ function WhiteboardPanel({
     async (original: any) => {
       let snapshot = {
         ...original,
-        revision: Number(
-          original.revision ?? boardRevisionRef.current,
-        ),
+        revision: boardRevisionRef.current,
         clientId: clientIdRef.current,
       };
       try {
@@ -520,15 +518,38 @@ function WhiteboardPanel({
     return () => onRegisterFlush?.(null);
   }, [flushBoard, onRegisterFlush]);
 
+  const unloadSentRef = useRef(false);
+
+  useEffect(() => {
+    const onLeave = () => {
+      if (unloadSentRef.current) return;
+      unloadSentRef.current = true;
+      const latest = latestSceneRef.current;
+      if (!latest) return;
+      api.putKeepalive(`/lessons/${lessonId}/board`, {
+        ...latest,
+        revision: boardRevisionRef.current,
+        clientId: clientIdRef.current,
+      });
+    };
+    window.addEventListener('pagehide', onLeave);
+    return () => window.removeEventListener('pagehide', onLeave);
+  }, [lessonId]);
+
   useEffect(
     () => () => {
+      if (unloadSentRef.current) return;
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       const latest = latestSceneRef.current;
       if (latest) {
-        void enqueueSave(latest);
+        void enqueueSave({
+          ...latest,
+          revision: boardRevisionRef.current,
+          clientId: clientIdRef.current,
+        });
       }
     },
-    [enqueueSave],
+    [enqueueSave, lessonId],
   );
 
   const insertPdfAsImages = useCallback(
@@ -1089,14 +1110,6 @@ export function LessonRoom({
   const boardFlushRef = useRef<(() => Promise<void>) | null>(null);
   const dockWidthRef = useRef(dockWidth);
   const pipDragOffset = useRef({ x: 0, y: 0 });
-
-  useEffect(() => {
-    const onLeave = () => {
-      void boardFlushRef.current?.();
-    };
-    window.addEventListener('beforeunload', onLeave);
-    return () => window.removeEventListener('beforeunload', onLeave);
-  }, []);
 
   useEffect(() => {
     let cancelled = false;

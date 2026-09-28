@@ -4,6 +4,7 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -42,7 +43,7 @@ export class Lesson {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => CalendarSlot, { onDelete: 'CASCADE' })
+  @OneToOne(() => CalendarSlot, { onDelete: 'CASCADE' })
   @JoinColumn()
   slot: CalendarSlot;
 
@@ -96,13 +97,13 @@ export class Lesson {
   @Column({ type: 'float', nullable: true })
   transcriptDurationSeconds: number;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   startedAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   lastParticipantLeftAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   endedAt: Date;
 
   @Column({
@@ -112,13 +113,13 @@ export class Lesson {
   })
   endReason: LessonEndReason;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   boardUpdatedAt: Date;
 
   @Column({ default: 0 })
   processingAttempts: number;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'timestamptz', nullable: true })
   nextProcessingAt: Date;
 
   @Column({ nullable: true })

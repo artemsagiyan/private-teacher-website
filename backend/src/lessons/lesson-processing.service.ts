@@ -8,6 +8,7 @@ import { StorageService } from '../storage/storage.service';
 import { Lesson, LessonReport, LessonStatus } from './entities/lesson.entity';
 import { LessonsService } from './lessons.service';
 import { Booking, BookingStatus } from '../bookings/entities/booking.entity';
+import { Teacher } from '../teachers/entities/teacher.entity';
 import { NotificationsService } from '../notifications/notifications.service';
 
 interface TranscriptSegment {
@@ -37,6 +38,8 @@ export class LessonProcessingService {
     private readonly lessonRepo: Repository<Lesson>,
     @InjectRepository(Booking)
     private readonly bookingRepo: Repository<Booking>,
+    @InjectRepository(Teacher)
+    private readonly teacherRepo: Repository<Teacher>,
   ) {}
 
   @Interval(20_000)
@@ -125,11 +128,14 @@ export class LessonProcessingService {
       );
       if (permanentlyFailed) {
         try {
-          await this.notifications.notifyLessonFailed(
-            lesson.teacher?.userId || lesson.teacherId,
-            lesson.id,
-            message,
-          );
+          const userId = await this.resolveTeacherUserId(lesson);
+          if (userId) {
+            await this.notifications.notifyLessonFailed(
+              userId,
+              lesson.id,
+              message,
+            );
+          }
         } catch {
           /* ignore */
         }
@@ -138,6 +144,15 @@ export class LessonProcessingService {
       clearInterval(heartbeat);
       this.running.delete(lesson.id);
     }
+  }
+
+  private async resolveTeacherUserId(lesson: Lesson) {
+    if (lesson.teacher?.userId) return lesson.teacher.userId;
+    if (!lesson.teacherId) return null;
+    const teacher = await this.teacherRepo.findOne({
+      where: { id: lesson.teacherId },
+    });
+    return teacher?.userId ?? null;
   }
 
   private async processOne(lesson: Lesson, leaseId: string) {

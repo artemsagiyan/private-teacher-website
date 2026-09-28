@@ -9,6 +9,7 @@ import { RegistrationCode } from './admin/entities/registration-code.entity';
 import { Lesson } from './lessons/entities/lesson.entity';
 import { OauthCode } from './auth/entities/oauth-code.entity';
 import { InitialSchema1735776000000 } from './migrations/1735776000000-InitialSchema';
+import { LessonTimestamps1735777000000 } from './migrations/1735777000000-LessonTimestamps';
 
 export default new DataSource({
   type: 'postgres',
@@ -28,5 +29,5 @@ export default new DataSource({
     Lesson,
     OauthCode,
   ],
-  migrations: [InitialSchema1735776000000],
+  migrations: [InitialSchema1735776000000, LessonTimestamps1735777000000],
 });

@@ -13,17 +13,20 @@ export function PublicHeader() {
 
   return (
     <header className="sticky top-0 z-50 glass border-b border-[rgb(var(--border)/0.6)]">
-      <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="h-7 w-7 rounded-lg icon-blue flex items-center justify-center shadow-glow">
+          <div className="h-8 w-8 rounded-lg bg-primary-700 flex items-center justify-center">
             <GraduationCap className="h-4 w-4 text-white" />
           </div>
-          <span className="font-bold text-[0.9rem] tracking-tight text-[rgb(var(--text))]">
+          <span className="font-display text-lg leading-none text-[rgb(var(--text))]">
             TutorPlatform
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-5 text-[0.82rem] text-[rgb(var(--text-2))]">
+        <nav className="hidden md:flex items-center gap-6 text-sm text-[rgb(var(--text-2))]">
+          <Link href="/#how" className="hover:text-[rgb(var(--text))] transition-colors">
+            Как это работает
+          </Link>
           <Link href="/#features" className="hover:text-[rgb(var(--text))] transition-colors">
             Возможности
           </Link>
@@ -72,6 +75,9 @@ export function PublicHeader() {
               <X className="h-5 w-5 text-[rgb(var(--text-2))]" />
             </button>
           </div>
+          <Link href="/#how" onClick={() => setOpen(false)} className="block text-sm">
+            Как это работает
+          </Link>
           <Link href="/#features" onClick={() => setOpen(false)} className="block text-sm">
             Возможности
           </Link>

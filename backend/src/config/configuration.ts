@@ -60,9 +60,13 @@ export default () => {
     apiKey: requireInProd('LIVEKIT_API_KEY', 'devkey'),
     apiSecret: requireInProd(
       'LIVEKIT_API_SECRET',
-      'devsecret1234567890abcdef',
+      'tutor-dev-livekit-secret-key-32chars',
     ),
-    url: process.env.LIVEKIT_URL || 'ws://localhost:7880',
+    url: process.env.LIVEKIT_URL || 'ws://localhost:7890',
+    publicUrl:
+      process.env.LIVEKIT_PUBLIC_URL ||
+      process.env.LIVEKIT_URL ||
+      'ws://localhost:7890',
     roomEmptyTimeoutSeconds:
       parseInt(process.env.LESSON_EMPTY_TIMEOUT_SECONDS, 10) || 1800,
     joinEarlyMinutes: parseInt(process.env.LESSON_JOIN_EARLY_MINUTES, 10) || 30,

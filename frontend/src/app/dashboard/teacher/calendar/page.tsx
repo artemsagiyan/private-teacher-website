@@ -93,6 +93,7 @@ export default function TeacherCalendarPage() {
   const [pickerWeekBase, setPickerWeekBase] = useState(new Date());
   const [pickerDay, setPickerDay] = useState<Date | null>(null);
   const [startSlot, setStartSlot] = useState<Date | null>(null);
+  const [durationMs, setDurationMs] = useState(SLOT_DURATION_MS);
   const [lessonType, setLessonType] = useState<LessonType>('individual');
   const [capacity, setCapacity] = useState(1);
   const [note, setNote] = useState('');
@@ -116,7 +117,7 @@ export default function TeacherCalendarPage() {
   const weekDays = getWeekDays(pickerWeekBase);
   const timeSlots = generateTimeSlots(slots, pickerDay);
 
-  const openCreate = (day?: Date, start?: Date) => {
+  const openCreate = (day?: Date, start?: Date, end?: Date) => {
     setCreating(true);
     setSelected(null);
     if (day) {
@@ -124,6 +125,11 @@ export default function TeacherCalendarPage() {
       setPickerWeekBase(day);
     }
     if (start) setStartSlot(start);
+    if (start && end && end.getTime() > start.getTime()) {
+      setDurationMs(end.getTime() - start.getTime());
+    } else {
+      setDurationMs(SLOT_DURATION_MS);
+    }
   };
 
   const handleCreate = async () => {
@@ -133,7 +139,7 @@ export default function TeacherCalendarPage() {
     }
     setSaving(true);
     try {
-      const end = new Date(startSlot.getTime() + SLOT_DURATION_MS);
+      const end = new Date(startSlot.getTime() + durationMs);
       await api.post('/calendar/slots', {
         startTime: startSlot.toISOString(),
         endTime: end.toISOString(),
@@ -187,7 +193,7 @@ export default function TeacherCalendarPage() {
       info.view.calendar.unselect();
       return;
     }
-    openCreate(start, start);
+    openCreate(start, info.start, info.end);
     info.view.calendar.unselect();
   };
 
@@ -215,7 +221,7 @@ export default function TeacherCalendarPage() {
   const joinable =
     selected &&
     selected.status !== 'cancelled' &&
-    canJoinLesson(selected.startTime, selected.endTime, now);
+    canJoinLesson(selected.startTime, selected.endTime, now, selected.lesson?.status);
 
   return (
     <div className="space-y-5">
@@ -579,12 +585,13 @@ export default function TeacherCalendarPage() {
                   startTime={selected.startTime}
                   endTime={selected.endTime}
                   now={now}
+                  lessonStatus={selected.lesson?.status}
                   layout="stack"
                   showHint={!joinable}
                 />
               )}
 
-              {selected.status === 'available' && (
+              {selected.status !== 'cancelled' && (
                 <div className="space-y-2 pt-1">
                   <Button
                     variant="destructive"
@@ -630,7 +637,7 @@ export default function TeacherCalendarPage() {
           <CalendarLegend
             items={[
               { color: '#10b981', label: 'Свободно' },
-              { color: '#6366f1', label: 'Занято' },
+              { color: '#14635c', label: 'Занято' },
               { color: '#ef4444', label: 'Отменено' },
             ]}
             showRecurringHint

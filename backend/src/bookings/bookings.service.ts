@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import { Booking, BookingStatus } from './entities/booking.entity';
 import {
@@ -65,6 +65,11 @@ export class BookingsService {
         throw new BadRequestException('Слот недоступен для записи');
       }
 
+      const now = new Date();
+      if (!isRecurring && slot.startTime <= now) {
+        throw new BadRequestException('Нельзя записаться на прошедший слот');
+      }
+
       let slotsToBook: CalendarSlot[] = [slot];
       if (isRecurring && slot.recurringGroupId) {
         const series = await manager.find(CalendarSlot, {
@@ -72,12 +77,8 @@ export class BookingsService {
           relations: ['teacher', 'teacher.user'],
         });
         slotsToBook = series.filter(
-          (s) =>
-            s.status === SlotStatus.AVAILABLE && s.startTime > new Date(),
+          (s) => s.status === SlotStatus.AVAILABLE && s.startTime > now,
         );
-        if (!slotsToBook.find((s) => s.id === slot.id)) {
-          slotsToBook.unshift(slot);
-        }
       }
 
       const groupId =
@@ -93,9 +94,14 @@ export class BookingsService {
         if (locked.status !== SlotStatus.AVAILABLE) continue;
         if (locked.bookedCount >= locked.capacity) continue;
         if (locked.teacherId !== student.teacherId) continue;
+        if (locked.startTime <= new Date()) continue;
 
         const alreadyBooked = await manager.findOne(Booking, {
-          where: { studentId: student.id, slotId: locked.id },
+          where: {
+            studentId: student.id,
+            slotId: locked.id,
+            status: BookingStatus.CONFIRMED,
+          },
         });
         if (alreadyBooked) continue;
 
@@ -144,46 +150,50 @@ export class BookingsService {
     const student = await this.studentRepository.findOne({
       where: { userId: studentUserId },
     });
-    const booking = await this.bookingRepository.findOne({
-      where: { id: bookingId },
-      relations: ['slot', 'slot.teacher'],
-    });
-    if (!booking) throw new NotFoundException('Запись не найдена');
-    if (booking.studentId !== student.id) throw new ForbiddenException();
+    if (!student) throw new NotFoundException('Ученик не найден');
 
-    const slot = booking.slot;
-    const hoursUntil = (slot.startTime.getTime() - Date.now()) / 3600000;
-    if (hoursUntil < 24) {
-      throw new BadRequestException(
-        'Отмена возможна не позже чем за 24 часа до занятия',
-      );
-    }
-
-    let bookingsToCancel: Booking[] = [booking];
-
-    if (cancelSeries && booking.recurringGroupId) {
-      bookingsToCancel = await this.bookingRepository.find({
-        where: {
-          recurringGroupId: booking.recurringGroupId,
-          studentId: student.id,
-          status: BookingStatus.CONFIRMED,
-        },
-        relations: ['slot'],
+    const slot = await this.dataSource.transaction(async (manager) => {
+      const booking = await manager.findOne(Booking, {
+        where: { id: bookingId },
+        relations: ['slot', 'slot.teacher'],
       });
-    }
+      if (!booking) throw new NotFoundException('Запись не найдена');
+      if (booking.studentId !== student.id) throw new ForbiddenException();
+      if (booking.status !== BookingStatus.CONFIRMED) {
+        throw new BadRequestException('Запись уже отменена');
+      }
 
-    for (const b of bookingsToCancel) {
-      const bSlot = b.slot;
-      const hrs = (bSlot.startTime.getTime() - Date.now()) / 3600000;
-      if (hrs < 0) continue;
+      const primary = booking.slot;
+      const hoursUntil = (primary.startTime.getTime() - Date.now()) / 3600000;
+      if (hoursUntil < 24) {
+        throw new BadRequestException(
+          'Отмена возможна не позже чем за 24 часа до занятия',
+        );
+      }
 
-      b.status = BookingStatus.CANCELLED_BY_STUDENT;
-      await this.bookingRepository.save(b);
+      let bookingsToCancel: Booking[] = [booking];
+      if (cancelSeries && booking.recurringGroupId) {
+        bookingsToCancel = await manager.find(Booking, {
+          where: {
+            recurringGroupId: booking.recurringGroupId,
+            studentId: student.id,
+            status: BookingStatus.CONFIRMED,
+          },
+          relations: ['slot'],
+        });
+      }
 
-      bSlot.bookedCount = Math.max(0, bSlot.bookedCount - 1);
-      if (bSlot.status === SlotStatus.BOOKED) bSlot.status = SlotStatus.AVAILABLE;
-      await this.slotRepository.save(bSlot);
-    }
+      for (const b of bookingsToCancel) {
+        const hrs = (b.slot.startTime.getTime() - Date.now()) / 3600000;
+        if (hrs < 24) continue;
+        await this.releaseConfirmedBooking(
+          manager,
+          b.id,
+          BookingStatus.CANCELLED_BY_STUDENT,
+        );
+      }
+      return primary;
+    });
 
     await this.notificationsService.notifyBookingCancelled(
       studentUserId,
@@ -210,19 +220,53 @@ export class BookingsService {
       throw new ForbiddenException();
     }
 
-    booking.status = BookingStatus.CANCELLED_BY_TEACHER;
-    await this.bookingRepository.save(booking);
+    if (booking.status !== BookingStatus.CONFIRMED) {
+      throw new BadRequestException('Запись уже отменена');
+    }
 
-    const slot = booking.slot;
-    slot.bookedCount = Math.max(0, slot.bookedCount - 1);
-    if (slot.status === SlotStatus.BOOKED) slot.status = SlotStatus.AVAILABLE;
-    await this.slotRepository.save(slot);
+    const slot = await this.dataSource.transaction(async (manager) => {
+      await this.releaseConfirmedBooking(
+        manager,
+        booking.id,
+        BookingStatus.CANCELLED_BY_TEACHER,
+      );
+      return booking.slot;
+    });
 
     await this.notificationsService.notifyBookingCancelled(
       booking.student.userId,
       slot.startTime,
     );
     return { message: 'Запись отменена преподавателем' };
+  }
+
+  private async releaseConfirmedBooking(
+    manager: EntityManager,
+    bookingId: string,
+    nextStatus: BookingStatus,
+  ) {
+    const updated = await manager.update(
+      Booking,
+      { id: bookingId, status: BookingStatus.CONFIRMED },
+      { status: nextStatus },
+    );
+    if (!updated.affected) return;
+
+    const booking = await manager.findOne(Booking, { where: { id: bookingId } });
+    if (!booking) return;
+    const locked = await manager.findOne(CalendarSlot, {
+      where: { id: booking.slotId },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (!locked) return;
+    locked.bookedCount = Math.max(0, locked.bookedCount - 1);
+    if (
+      locked.status === SlotStatus.BOOKED &&
+      locked.bookedCount < locked.capacity
+    ) {
+      locked.status = SlotStatus.AVAILABLE;
+    }
+    await manager.save(locked);
   }
 
   async getStudentBookings(studentUserId: string) {
@@ -232,7 +276,7 @@ export class BookingsService {
     if (!student) return [];
     return this.bookingRepository.find({
       where: { studentId: student.id },
-      relations: ['slot', 'slot.teacher', 'slot.teacher.user'],
+      relations: ['slot', 'slot.lesson', 'slot.teacher', 'slot.teacher.user'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -244,7 +288,7 @@ export class BookingsService {
     if (!student) return [];
     const bookings = await this.bookingRepository.find({
       where: { studentId: student.id, status: BookingStatus.CONFIRMED },
-      relations: ['slot'],
+      relations: ['slot', 'slot.lesson'],
     });
     const lateMs =
       (this.config.get<number>('livekit.joinLateMinutes') ?? 120) * 60_000;
@@ -262,6 +306,7 @@ export class BookingsService {
     return this.bookingRepository
       .createQueryBuilder('booking')
       .leftJoinAndSelect('booking.slot', 'slot')
+      .leftJoinAndSelect('slot.lesson', 'lesson')
       .leftJoinAndSelect('slot.teacher', 'teacher')
       .leftJoinAndSelect('teacher.user', 'teacherUser')
       .leftJoinAndSelect('booking.student', 'student')

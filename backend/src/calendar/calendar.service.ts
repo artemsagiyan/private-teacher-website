@@ -4,8 +4,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Between, In, Not, Repository } from 'typeorm';
+import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
+import { Between, DataSource, EntityManager, In, Not, Repository } from 'typeorm';
 import { randomUUID } from 'crypto';
 import {
   CalendarSlot,
@@ -33,6 +33,8 @@ export class CalendarService {
     private studentRepository: Repository<Student>,
     @InjectRepository(Booking)
     private bookingRepository: Repository<Booking>,
+    @InjectDataSource()
+    private dataSource: DataSource,
     private notificationsService: NotificationsService,
   ) {}
 
@@ -61,43 +63,58 @@ export class CalendarService {
         occurrences.push({ start: s, end: new Date(s.getTime() + duration) });
       }
     }
-    await this.assertNoOverlap(teacher.id, occurrences);
+    return this.withTeacherLock(teacher.id, async (manager) => {
+      await this.assertNoOverlap(manager, teacher.id, occurrences);
 
-    const buildSlot = (s: Date, e: Date) =>
-      this.slotRepository.create({
-        teacherId: teacher.id,
-        startTime: s,
-        endTime: e,
-        lessonType: dto.lessonType,
-        capacity,
-        note: dto.note,
-        status: SlotStatus.AVAILABLE,
-        isRecurring: dto.isRecurring ?? false,
-        recurringGroupId: groupId,
-      });
+      const buildSlot = (s: Date, e: Date) =>
+        manager.create(CalendarSlot, {
+          teacherId: teacher.id,
+          startTime: s,
+          endTime: e,
+          lessonType: dto.lessonType,
+          capacity,
+          note: dto.note,
+          status: SlotStatus.AVAILABLE,
+          isRecurring: dto.isRecurring ?? false,
+          recurringGroupId: groupId,
+        });
 
-    const firstSlot = buildSlot(start, end);
-    await this.slotRepository.save(firstSlot);
+      const firstSlot = buildSlot(start, end);
+      await manager.save(firstSlot);
 
-    if (dto.isRecurring) {
-      const siblings: CalendarSlot[] = [];
-      for (let w = 1; w < RECURRING_WEEKS; w++) {
-        const s = new Date(start.getTime() + w * MS_PER_WEEK);
-        const e = new Date(s.getTime() + duration);
-        siblings.push(buildSlot(s, e));
+      if (dto.isRecurring) {
+        const siblings: CalendarSlot[] = [];
+        for (let w = 1; w < RECURRING_WEEKS; w++) {
+          const s = new Date(start.getTime() + w * MS_PER_WEEK);
+          const e = new Date(s.getTime() + duration);
+          siblings.push(buildSlot(s, e));
+        }
+        await manager.save(siblings);
       }
-      await this.slotRepository.save(siblings);
-    }
 
-    return firstSlot;
+      return firstSlot;
+    });
+  }
+
+  private withTeacherLock<T>(
+    teacherId: string,
+    fn: (manager: EntityManager) => Promise<T>,
+  ) {
+    return this.dataSource.transaction(async (manager) => {
+      await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+        `calendar:${teacherId}`,
+      ]);
+      return fn(manager);
+    });
   }
 
   private async assertNoOverlap(
+    manager: EntityManager,
     teacherId: string,
     ranges: Array<{ start: Date; end: Date }>,
     ignoreSlotId?: string,
   ) {
-    const existing = await this.slotRepository.find({
+    const existing = await manager.find(CalendarSlot, {
       where: {
         teacherId,
         status: Not(SlotStatus.CANCELLED),
@@ -122,41 +139,56 @@ export class CalendarService {
       where: { userId: teacherUserId },
     });
     if (!teacher) throw new NotFoundException('Преподаватель не найден');
-    const slot = await this.slotRepository.findOne({ where: { id: slotId } });
-    if (!slot) throw new NotFoundException('Слот не найден');
-    if (slot.teacherId !== teacher.id) throw new ForbiddenException();
+    return this.withTeacherLock(teacher.id, async (manager) => {
+      const slot = await manager.findOne(CalendarSlot, { where: { id: slotId } });
+      if (!slot) throw new NotFoundException('Слот не найден');
+      if (slot.teacherId !== teacher.id) throw new ForbiddenException();
+      if (slot.status === SlotStatus.CANCELLED) {
+        throw new BadRequestException('Слот уже отменён');
+      }
 
-    const nextStart = data.startTime
-      ? new Date(data.startTime)
-      : slot.startTime;
-    const nextEnd = data.endTime ? new Date(data.endTime) : slot.endTime;
-    try {
-      assertValidSlotRange(nextStart, nextEnd);
-    } catch (error) {
-      throw new BadRequestException(
-        error instanceof Error ? error.message : 'Некорректный интервал',
+      const nextStart = data.startTime
+        ? new Date(data.startTime)
+        : slot.startTime;
+      const nextEnd = data.endTime ? new Date(data.endTime) : slot.endTime;
+      try {
+        assertValidSlotRange(nextStart, nextEnd);
+      } catch (error) {
+        throw new BadRequestException(
+          error instanceof Error ? error.message : 'Некорректный интервал',
+        );
+      }
+      await this.assertNoOverlap(
+        manager,
+        teacher.id,
+        [{ start: nextStart, end: nextEnd }],
+        slot.id,
       );
-    }
-    await this.assertNoOverlap(
-      teacher.id,
-      [{ start: nextStart, end: nextEnd }],
-      slot.id,
-    );
 
-    const lessonType = data.lessonType ?? slot.lessonType;
-    const capacity =
-      lessonType === LessonType.INDIVIDUAL
-        ? 1
-        : (data.capacity ?? slot.capacity);
+      const lessonType = data.lessonType ?? slot.lessonType;
+      const capacity =
+        lessonType === LessonType.INDIVIDUAL
+          ? 1
+          : (data.capacity ?? slot.capacity);
+      if (capacity < slot.bookedCount) {
+        throw new BadRequestException(
+          'Вместимость не может быть меньше числа записей',
+        );
+      }
 
-    Object.assign(slot, {
-      startTime: nextStart,
-      endTime: nextEnd,
-      lessonType,
-      capacity,
-      ...(data.note !== undefined && { note: data.note }),
+      Object.assign(slot, {
+        startTime: nextStart,
+        endTime: nextEnd,
+        lessonType,
+        capacity,
+        status:
+          slot.bookedCount >= capacity
+            ? SlotStatus.BOOKED
+            : SlotStatus.AVAILABLE,
+        ...(data.note !== undefined && { note: data.note }),
+      });
+      return manager.save(slot);
     });
-    return this.slotRepository.save(slot);
   }
 
   async deleteSlot(teacherUserId: string, slotId: string, cancelSeries = false) {
@@ -220,7 +252,7 @@ export class CalendarService {
     return this.slotRepository.find({
       where,
       order: { startTime: 'ASC' },
-      relations: ['bookings'],
+      relations: ['bookings', 'lesson'],
     });
   }
 

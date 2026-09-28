@@ -21,6 +21,14 @@ export default function TeacherProfilePage() {
   const [changingPwd, setChangingPwd]     = useState(false);
 
   const uForm = useForm({ defaultValues: { firstName: user?.firstName ?? '', lastName: user?.lastName ?? '' } });
+
+  useEffect(() => {
+    if (!user) return;
+    uForm.reset({
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+    });
+  }, [user?.id, user?.firstName, user?.lastName]);
   const tForm = useForm<{ bio: string; subjects: string }>({ defaultValues: { bio: '', subjects: '' } });
   const pForm = useForm<{ oldPassword: string; newPassword: string; confirm: string }>();
 

@@ -32,9 +32,13 @@ export default function StudentTeacherPage() {
 
   const onDetach = async () => {
     if (!confirm('Отвязать преподавателя? Вы потеряете доступ к его расписанию.')) return;
-    await api.delete('/students/detach-teacher');
-    setTeacher(null);
-    toast.info('Преподаватель отвязан');
+    try {
+      await api.delete('/students/detach-teacher');
+      setTeacher(null);
+      toast.info('Преподаватель отвязан');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Не удалось отвязать преподавателя');
+    }
   };
 
   if (teacher === undefined) return (

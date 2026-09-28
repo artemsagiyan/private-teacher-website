@@ -74,7 +74,7 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-5 bg-[rgb(var(--bg))]">
-      <div className="w-full max-w-md animate-fade-in">
+        <div className="w-full max-w-md animate-fade-in rounded-3xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-6 shadow-card sm:p-8">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-6">
             <div className="h-8 w-8 rounded-xl icon-blue flex items-center justify-center shadow-glow">
@@ -82,7 +82,7 @@ export default function RegisterPage() {
             </div>
             <span className="font-bold text-[rgb(var(--text))]">TutorPlatform</span>
           </Link>
-          <h1 className="text-2xl font-bold text-[rgb(var(--text))] tracking-tight">Создать аккаунт</h1>
+          <h1 className="text-4xl text-[rgb(var(--text))]">Создать аккаунт</h1>
           <p className="text-sm text-[rgb(var(--text-2))] mt-1.5">
             Уже есть аккаунт?{' '}
             <Link href="/auth/login" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">Войти</Link>

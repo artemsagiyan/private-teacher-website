@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { User, Lock, Mail } from 'lucide-react';
@@ -20,6 +20,15 @@ export default function ProfilePage() {
   const profileForm = useForm({
     defaultValues: { firstName: user?.firstName ?? '', lastName: user?.lastName ?? '', phone: user?.phone ?? '' },
   });
+
+  useEffect(() => {
+    if (!user) return;
+    profileForm.reset({
+      firstName: user.firstName ?? '',
+      lastName: user.lastName ?? '',
+      phone: user.phone ?? '',
+    });
+  }, [user?.id, user?.firstName, user?.lastName, user?.phone]);
 
   const pwdForm = useForm<{ oldPassword: string; newPassword: string; confirm: string }>();
 

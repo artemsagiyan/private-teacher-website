@@ -26,13 +26,19 @@ function OAuthCallbackInner() {
       router.replace('/auth/login');
       return;
     }
+    const key = `oauth-exchange:${code}`;
+    const state = sessionStorage.getItem(key);
+    if (state === 'pending' || state === 'done') return;
+    sessionStorage.setItem(key, 'pending');
     api
       .post<AuthTokens>('/auth/oauth/exchange', { code })
       .then((tokens) => {
+        sessionStorage.setItem(key, 'done');
         login(tokens);
         router.replace(homeForRole(tokens.user.role));
       })
       .catch(() => {
+        sessionStorage.removeItem(key);
         setFailed(true);
         toast.error('Сессия Google истекла. Войдите ещё раз.');
         router.replace('/auth/login');

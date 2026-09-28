@@ -18,6 +18,21 @@ function repoMock(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function queryBuilder(affected = 1) {
+  const builder = {
+    update: jest.fn(),
+    set: jest.fn(),
+    where: jest.fn(),
+    andWhere: jest.fn(),
+    execute: jest.fn(async () => ({ affected })),
+  };
+  builder.update.mockReturnValue(builder);
+  builder.set.mockReturnValue(builder);
+  builder.where.mockReturnValue(builder);
+  builder.andWhere.mockReturnValue(builder);
+  return builder;
+}
+
 describe('AuthService registration', () => {
   let service: AuthService;
   let users: ReturnType<typeof repoMock>;
@@ -25,6 +40,7 @@ describe('AuthService registration', () => {
   let students: ReturnType<typeof repoMock>;
   let codes: ReturnType<typeof repoMock>;
   let oauth: ReturnType<typeof repoMock>;
+  let claim: ReturnType<typeof queryBuilder>;
   let jwt: { sign: jest.Mock };
   let notifications: { sendWelcomeEmail: jest.Mock };
 
@@ -34,6 +50,16 @@ describe('AuthService registration', () => {
     students = repoMock();
     codes = repoMock();
     oauth = repoMock();
+    claim = queryBuilder(1);
+    (users as { manager?: unknown }).manager = {
+      transaction: async (fn: (em: unknown) => Promise<unknown>) =>
+        fn({
+          findOne: users.findOne,
+          create: (_entity: unknown, value: object) => users.create(value),
+          save: users.save,
+          createQueryBuilder: () => claim,
+        }),
+    };
     jwt = { sign: jest.fn().mockReturnValue('signed-token') };
     notifications = {
       sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
@@ -76,7 +102,6 @@ describe('AuthService registration', () => {
     const result = await service.registerStudent(studentDto);
 
     expect(users.save).toHaveBeenCalled();
-    expect(students.save).toHaveBeenCalled();
     expect(notifications.sendWelcomeEmail).toHaveBeenCalledWith(
       'ivan@example.com',
       'Иван',
@@ -95,7 +120,7 @@ describe('AuthService registration', () => {
     const result = await service.registerStudent(studentDto);
 
     expect(result.accessToken).toBe('signed-token');
-    expect(students.save).toHaveBeenCalled();
+    expect(users.save).toHaveBeenCalled();
   });
 
   it('rejects mismatched passwords', async () => {
@@ -116,7 +141,7 @@ describe('AuthService registration', () => {
   });
 
   it('rejects teacher registration with missing/expired code', async () => {
-    codes.findOne.mockResolvedValue(null);
+    claim.execute.mockResolvedValue({ affected: 0 });
     await expect(
       service.registerTeacher({
         firstName: 'Анна',
@@ -127,32 +152,10 @@ describe('AuthService registration', () => {
         registrationCode: 'BADCODE',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
-
-    codes.findOne.mockResolvedValue({
-      code: 'OLD',
-      isUsed: false,
-      expiresAt: new Date(Date.now() - 1000),
-    });
-    await expect(
-      service.registerTeacher({
-        firstName: 'Анна',
-        lastName: 'Смирнова',
-        email: 'anna@example.com',
-        password: 'Password123',
-        passwordConfirm: 'Password123',
-        registrationCode: 'OLD',
-      }),
-    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('registers a teacher with a valid code', async () => {
     users.findOne.mockResolvedValue(null);
-    const code = {
-      code: 'NEWTEACHER',
-      isUsed: false,
-      expiresAt: new Date(Date.now() + 86_400_000),
-    };
-    codes.findOne.mockResolvedValue(code);
 
     const result = await service.registerTeacher({
       firstName: 'Анна',
@@ -163,9 +166,7 @@ describe('AuthService registration', () => {
       registrationCode: 'NEWTEACHER',
     });
 
-    expect(teachers.save).toHaveBeenCalled();
-    expect(code.isUsed).toBe(true);
-    expect(codes.save).toHaveBeenCalledWith(code);
+    expect(users.save).toHaveBeenCalled();
     expect(result.user.role).toBe(UserRole.TEACHER);
   });
 

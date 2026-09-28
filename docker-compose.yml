@@ -89,8 +89,9 @@ services:
       FRONTEND_URL: http://localhost:3000
       NODE_ENV: development
       LIVEKIT_API_KEY: devkey
-      LIVEKIT_API_SECRET: devsecret1234567890abcdef
-      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_API_SECRET: tutor-dev-livekit-secret-key-32chars
+      LIVEKIT_URL: ws://livekit:7890
+      LIVEKIT_PUBLIC_URL: ws://localhost:7890
       LESSON_EMPTY_TIMEOUT_SECONDS: 1800
       LESSON_JOIN_EARLY_MINUTES: 30
       LESSON_JOIN_LATE_MINUTES: 120
@@ -137,11 +138,11 @@ services:
       network: host
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3001
-        NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7880
+        NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7890
     container_name: tutor_frontend
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3001
-      NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7880
+      NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7890
     ports:
       - '3000:3000'
     healthcheck:
@@ -163,9 +164,9 @@ services:
     image: livekit/livekit-server:latest
     container_name: tutor_livekit
     ports:
-      - '7880:7880'
-      - '7881:7881'
-      - '7882:7882/udp'
+      - '7890:7890'
+      - '7891:7891'
+      - '7892:7892/udp'
     command: --config /etc/livekit.yaml --bind 0.0.0.0
     volumes:
       - ./infra/livekit.yaml:/etc/livekit.yaml:ro
@@ -173,9 +174,9 @@ services:
       test:
         [
           'CMD',
-          'bash',
+          'sh',
           '-c',
-          'echo >/dev/tcp/127.0.0.1/7880',
+          "netstat -ltn | grep -q ':7890'",
         ]
       interval: 15s
       timeout: 5s

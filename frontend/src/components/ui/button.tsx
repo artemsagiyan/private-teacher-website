@@ -34,9 +34,8 @@ const buttonVariants = cva(
         ].join(' '),
         link: 'text-primary-600 underline-offset-4 hover:underline dark:text-primary-400 p-0 h-auto',
         gradient: [
-          'bg-gradient-to-r from-primary-600 to-violet-500 text-white shadow-sm',
-          'hover:from-primary-700 hover:to-violet-600 active:from-primary-800',
-          'shadow-glow',
+          'bg-primary-700 text-white shadow-glow',
+          'hover:bg-primary-800 active:bg-primary-900',
         ].join(' '),
       },
       size: {

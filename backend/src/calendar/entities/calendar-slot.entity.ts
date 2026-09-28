@@ -5,6 +5,7 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Teacher } from '../../teachers/entities/teacher.entity';
@@ -66,4 +67,7 @@ export class CalendarSlot {
 
   @OneToMany(() => Booking, (booking) => booking.slot)
   bookings: Booking[];
+
+  @OneToOne('Lesson', 'slot')
+  lesson?: { id: string; status: string };
 }

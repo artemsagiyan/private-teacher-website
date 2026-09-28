@@ -119,6 +119,7 @@ export class VideoService {
 
     return {
       token: await at.toJwt(),
+      url: this.config.get<string>('livekit.publicUrl'),
       room: lesson.roomName,
       lessonId: lesson.id,
       lessonStatus: lesson.status,

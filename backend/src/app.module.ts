@@ -27,6 +27,7 @@ import { LessonsModule } from './lessons/lessons.module';
 import { StorageModule } from './storage/storage.module';
 import { HealthModule } from './health/health.module';
 import { InitialSchema1735776000000 } from './migrations/1735776000000-InitialSchema';
+import { LessonTimestamps1735777000000 } from './migrations/1735777000000-LessonTimestamps';
 
 @Module({
   imports: [
@@ -59,7 +60,10 @@ import { InitialSchema1735776000000 } from './migrations/1735776000000-InitialSc
             Lesson,
             OauthCode,
           ],
-          migrations: [InitialSchema1735776000000],
+          migrations: [
+            InitialSchema1735776000000,
+            LessonTimestamps1735777000000,
+          ],
           migrationsRun: isProd,
           synchronize: !isProd,
           logging: config.get<string>('nodeEnv') === 'development',

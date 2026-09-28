@@ -99,6 +99,7 @@ export default function StudentDashboard() {
                   booking.slot.startTime,
                   booking.slot.endTime,
                   now,
+                  booking.slot.lesson?.status,
                 );
                 return (
                   <div key={booking.id} className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl bg-[rgb(var(--surface-2))] hover:bg-[rgb(var(--border)/0.4)] transition-colors">
@@ -121,6 +122,7 @@ export default function StudentDashboard() {
                           startTime={booking.slot.startTime}
                           endTime={booking.slot.endTime}
                           now={now}
+                          lessonStatus={booking.slot.lesson?.status}
                         />
                       ) : (
                         <Badge variant="success" dot>Подтверждено</Badge>

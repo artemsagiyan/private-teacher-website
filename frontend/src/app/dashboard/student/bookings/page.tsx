@@ -36,6 +36,8 @@ export default function StudentBookingsPage() {
     try {
       const d = await api.get<Booking[]>('/bookings/my');
       setBookings(d);
+    } catch {
+      toast.error('Не удалось загрузить записи');
     } finally {
       setLoading(false);
     }
@@ -183,7 +185,12 @@ function BookingRow({
     canCancelBooking(booking.slot.startTime, now);
   const canJoin =
     booking.status === 'confirmed' &&
-    canJoinLesson(booking.slot.startTime, booking.slot.endTime, now);
+    canJoinLesson(
+      booking.slot.startTime,
+      booking.slot.endTime,
+      now,
+      booking.slot.lesson?.status,
+    );
 
   return (
     <div
@@ -230,6 +237,7 @@ function BookingRow({
             startTime={booking.slot.startTime}
             endTime={booking.slot.endTime}
             now={now}
+            lessonStatus={booking.slot.lesson?.status}
           />
         )}
         {canCancel && (

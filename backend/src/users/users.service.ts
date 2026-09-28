@@ -64,7 +64,10 @@ export class UsersService {
       throw new UnauthorizedException('Неверный текущий пароль');
     }
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await this.userRepository.update(userId, { passwordHash });
+    await this.userRepository.update(userId, {
+      passwordHash,
+      refreshToken: null,
+    });
     return { message: 'Пароль изменён' };
   }
 

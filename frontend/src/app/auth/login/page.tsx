@@ -49,8 +49,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex bg-[rgb(var(--bg))]">
       {/* Left decorative panel */}
       <div
-        className="hidden lg:flex lg:w-[420px] xl:w-[480px] relative flex-col justify-between p-10 overflow-hidden"
-        style={{ background: 'rgb(10 10 20)' }}
+        className="hidden lg:flex lg:w-[420px] xl:w-[480px] relative flex-col justify-between p-10 overflow-hidden bg-[rgb(var(--sidebar-bg))]"
       >
         <div className="absolute inset-0 bg-grid-pattern-dark bg-[size:28px_28px]" />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-gradient-radial from-primary-600/20 via-violet-600/10 to-transparent rounded-full blur-3xl pointer-events-none" />
@@ -98,7 +97,7 @@ export default function LoginPage() {
           </div>
 
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-[rgb(var(--text))] tracking-tight">Вход в аккаунт</h1>
+            <h1 className="text-4xl text-[rgb(var(--text))]">Вход</h1>
             <p className="text-sm text-[rgb(var(--text-2))] mt-1.5">
               Нет аккаунта?{' '}
               <Link href="/auth/register" className="text-primary-600 dark:text-primary-400 hover:underline font-medium">

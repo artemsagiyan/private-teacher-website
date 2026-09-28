@@ -158,7 +158,12 @@ export default function TeacherDashboard() {
           ) : (
             <div className="space-y-2">
               {upcoming.slice(0, 5).map((b) => {
-                const join = canJoinLesson(b.slot.startTime, b.slot.endTime, now);
+                const join = canJoinLesson(
+                  b.slot.startTime,
+                  b.slot.endTime,
+                  now,
+                  b.slot.lesson?.status,
+                );
                 return (
                 <div key={b.id} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[rgb(var(--surface-2))] hover:bg-[rgb(var(--border)/0.3)] transition-colors">
                   <div className="flex min-w-0 items-center gap-3">
@@ -178,6 +183,7 @@ export default function TeacherDashboard() {
                         startTime={b.slot.startTime}
                         endTime={b.slot.endTime}
                         now={now}
+                        lessonStatus={b.slot.lesson?.status}
                       />
                     ) : (
                       <Badge variant="success" dot>Подтверждено</Badge>

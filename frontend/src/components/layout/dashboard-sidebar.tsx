@@ -35,10 +35,10 @@ export function DashboardSidebar({
           onClick={onNavigate}
           className="group flex items-center gap-2.5"
         >
-          <div className="icon-blue flex h-7 w-7 shrink-0 items-center justify-center rounded-lg shadow-glow">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary-500">
             <GraduationCap className="h-4 w-4 text-white" />
           </div>
-          <span className="text-sm font-bold tracking-tight text-white/90 transition-colors group-hover:text-white">
+          <span className="font-display text-base leading-none text-white/90 transition-colors group-hover:text-white">
             TutorPlatform
           </span>
         </Link>

@@ -12,11 +12,15 @@ export const CAL_HOURS_END = 22;
 
 export type LessonViewMode = 'video' | 'split' | 'board';
 
+const LIVE_LESSON_STATUSES = new Set(['starting', 'active']);
+
 export function canJoinLesson(
   startTime: string | Date,
   endTime: string | Date,
   now = Date.now(),
+  lessonStatus?: string | null,
 ) {
+  if (lessonStatus && LIVE_LESSON_STATUSES.has(lessonStatus)) return true;
   const start = new Date(startTime).getTime();
   const end = new Date(endTime).getTime();
   return now >= start - LESSON_JOIN_EARLY_MS && now <= end + LESSON_JOIN_LATE_MS;
