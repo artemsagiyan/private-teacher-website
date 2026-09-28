@@ -24,12 +24,14 @@ import { StorageService } from '../storage/storage.service';
 import { User } from '../users/entities/user.entity';
 import { SaveBoardDto } from './dto/save-board.dto';
 import { LessonsService } from './lessons.service';
+import { PracticeService } from './practice.service';
 import { LivekitLifecycleService } from './livekit-lifecycle.service';
 
 @Controller('lessons')
 export class LessonsController {
   constructor(
     private readonly lessons: LessonsService,
+    private readonly practice: PracticeService,
     private readonly lifecycle: LivekitLifecycleService,
     private readonly storage: StorageService,
   ) {}
@@ -51,6 +53,29 @@ export class LessonsController {
   @UseGuards(JwtAuthGuard)
   list(@CurrentUser() user: User) {
     return this.lessons.listForUser(user);
+  }
+
+  @Get(':id/practice')
+  @UseGuards(JwtAuthGuard)
+  getPractice(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.practice.forLesson(user, id);
+  }
+
+  @Post(':id/practice')
+  @UseGuards(JwtAuthGuard)
+  refreshPractice(@CurrentUser() user: User, @Param('id') id: string) {
+    return this.practice.forLesson(user, id, true);
+  }
+
+  @Post(':id/homework')
+  @UseGuards(JwtAuthGuard)
+  homework(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() body: { homework?: string[] },
+  ) {
+    const homework = Array.isArray(body?.homework) ? body.homework : [];
+    return this.lessons.sendHomework(user, id, homework);
   }
 
   @Get(':id')

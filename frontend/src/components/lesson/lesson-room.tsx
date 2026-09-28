@@ -18,6 +18,7 @@ import { ArrowLeft, Loader2, Video, PenLine, LayoutPanelLeft, MonitorOff, Pictur
 import { toast } from 'sonner';
 import { isPdfFile, pdfFileToImages } from '@/lib/pdf-to-images';
 import { api } from '@/lib/api';
+import { PracticePanel } from '@/components/lesson/practice-panel';
 import type { LessonStatus } from '@/types';
 
 const DOCK_DEFAULT = 280;
@@ -1352,6 +1353,7 @@ export function LessonRoom({
           <span className="text-sm font-medium text-[rgb(var(--text))] truncate">
             {title}
           </span>
+          {isTeacher && <PracticePanel lessonId={lessonId} />}
           <span
             className={[
               'flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium',

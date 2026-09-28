@@ -11,6 +11,7 @@ import { randomUUID } from 'crypto';
 import { Booking, BookingStatus } from '../bookings/entities/booking.entity';
 import { CalendarSlot } from '../calendar/entities/calendar-slot.entity';
 import { StorageService } from '../storage/storage.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { Student } from '../students/entities/student.entity';
 import { Teacher } from '../teachers/entities/teacher.entity';
 import { User } from '../users/entities/user.entity';
@@ -33,6 +34,7 @@ export class LessonsService {
     @InjectRepository(Student)
     private readonly studentRepo: Repository<Student>,
     private readonly storage: StorageService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async ensureForSlot(slotId: string): Promise<Lesson> {
@@ -162,6 +164,48 @@ export class LessonsService {
       throw new ForbiddenException('Этот урок не принадлежит вам');
     }
     return lesson;
+  }
+
+  async sendHomework(user: User, lessonId: string, homework: string[]) {
+    const lesson = await this.assertTeacherOwns(user, lessonId);
+    const cleaned = homework.map((item) => item.trim()).filter(Boolean);
+    const report = {
+      summary: lesson.report?.summary || '',
+      topics: lesson.report?.topics || [],
+      achievements: lesson.report?.achievements || [],
+      difficulties: lesson.report?.difficulties || [],
+      homework: cleaned,
+      recommendations: lesson.report?.recommendations || [],
+      keyMoments: lesson.report?.keyMoments || [],
+    };
+    if (lesson.reportObjectKey) {
+      await this.storage.putJson(lesson.reportObjectKey, report);
+    }
+    await this.lessonRepo.update(lesson.id, { report });
+
+    const bookings = await this.bookingRepo.find({
+      where: {
+        slotId: lesson.slotId,
+        status: In([BookingStatus.CONFIRMED, BookingStatus.COMPLETED]),
+      },
+      relations: ['student', 'student.user'],
+    });
+    for (const booking of bookings) {
+      const student = booking.student;
+      if (!student) continue;
+      const studentName = student.user
+        ? `${student.user.firstName ?? ''} ${student.user.lastName ?? ''}`.trim()
+        : 'ученик';
+      await this.notifications.deliverHomework({
+        studentUserId: student.userId,
+        parentEmail: student.parentEmail,
+        studentName: studentName || 'ученик',
+        lessonId: lesson.id,
+        startTime: lesson.slot?.startTime,
+        report,
+      });
+    }
+    return { homework: cleaned };
   }
 
   async saveBoard(user: User, lessonId: string, scene: Record<string, unknown>) {
@@ -433,7 +477,7 @@ export class LessonsService {
     };
   }
 
-  private async getAccessibleLesson(user: User, lessonId: string) {
+  async getAccessibleLesson(user: User, lessonId: string) {
     const lesson = await this.lessonRepo.findOne({
       where: { id: lessonId },
       relations: ['slot', 'teacher', 'teacher.user'],

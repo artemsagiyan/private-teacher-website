@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as nodemailer from 'nodemailer';
 import { Notification, NotificationType } from './entities/notification.entity';
+import { LessonReport } from '../lessons/entities/lesson.entity';
 import { User } from '../users/entities/user.entity';
 
 @Injectable()
@@ -151,6 +152,91 @@ export class NotificationsService {
     );
   }
 
+  async deliverLessonToFamily(input: {
+    studentUserId?: string;
+    parentEmail?: string | null;
+    studentName: string;
+    lessonId: string;
+    startTime?: Date;
+    report: LessonReport;
+  }) {
+    const when = input.startTime ? this.formatDate(input.startTime) : '';
+    const link = `${this.configService.get<string>('frontendUrl')}/dashboard/lessons/${input.lessonId}`;
+    const reportHtml = this.reportHtml(input.studentName, when, input.report, link);
+    const reportText = this.reportText(input.studentName, when, input.report, link);
+
+    if (input.studentUserId) {
+      await this.create(
+        input.studentUserId,
+        NotificationType.LESSON_REPORT_READY,
+        `Готов отчёт по уроку${when ? ` (${when})` : ''}`,
+        input.lessonId,
+      );
+      await this.sendEmail(
+        input.studentUserId,
+        'Отчёт по уроку',
+        reportText,
+        reportHtml,
+      );
+    }
+
+    if (input.parentEmail) {
+      await this.sendEmailDirect(
+        input.parentEmail,
+        `Отчёт об уроке: ${input.studentName}`,
+        reportText,
+        reportHtml,
+      );
+    }
+
+    await this.deliverHomework(input);
+  }
+
+  async deliverHomework(input: {
+    studentUserId?: string;
+    parentEmail?: string | null;
+    studentName: string;
+    lessonId: string;
+    startTime?: Date;
+    report: Pick<LessonReport, 'homework'>;
+  }) {
+    const homework = input.report.homework.filter((item) => item.trim());
+    if (!homework.length) return;
+
+    const when = input.startTime ? this.formatDate(input.startTime) : '';
+    const link = `${this.configService.get<string>('frontendUrl')}/dashboard/lessons/${input.lessonId}`;
+    const html = this.homeworkHtml(input.studentName, when, homework, link);
+    const text = [
+      `Домашнее задание для ${input.studentName}${when ? ` (${when})` : ''}:`,
+      ...homework.map((item, index) => `${index + 1}. ${item}`),
+      '',
+      link,
+    ].join('\n');
+
+    if (input.studentUserId) {
+      await this.create(
+        input.studentUserId,
+        NotificationType.HOMEWORK_ASSIGNED,
+        `Домашнее задание: ${homework[0]}`,
+        input.lessonId,
+      );
+      await this.sendEmail(
+        input.studentUserId,
+        'Домашнее задание',
+        text,
+        html,
+      );
+    }
+    if (input.parentEmail) {
+      await this.sendEmailDirect(
+        input.parentEmail,
+        `Домашнее задание: ${input.studentName}`,
+        text,
+        html,
+      );
+    }
+  }
+
   async notifyLessonFailed(userId: string, lessonId: string, reason?: string) {
     const message = reason
       ? `Не удалось обработать урок: ${reason}`
@@ -258,6 +344,77 @@ export class NotificationsService {
     } catch (err) {
       this.logger.error('Failed to send email', err);
     }
+  }
+
+  private reportText(
+    studentName: string,
+    when: string,
+    report: LessonReport,
+    link: string,
+  ) {
+    const lines = [
+      `Отчёт об уроке: ${studentName}${when ? ` (${when})` : ''}`,
+      '',
+      report.summary,
+      this.lines('Темы', report.topics),
+      this.lines('Что получилось', report.achievements),
+      this.lines('Сложности', report.difficulties),
+      this.lines('Домашнее задание', report.homework),
+      this.lines('К следующему уроку', report.recommendations),
+      '',
+      `Открыть в кабинете: ${link}`,
+    ];
+    return lines.filter((line) => line !== undefined).join('\n');
+  }
+
+  private lines(title: string, items: string[]) {
+    if (!items.length) return '';
+    return `\n${title}:\n${items.map((item) => `• ${item}`).join('\n')}`;
+  }
+
+  private reportHtml(
+    studentName: string,
+    when: string,
+    report: LessonReport,
+    link: string,
+  ) {
+    const section = (title: string, items: string[]) =>
+      items.length
+        ? `<h3>${title}</h3><ul>${items.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('')}</ul>`
+        : '';
+    return this.wrapHtml(
+      `Урок: ${this.escapeHtml(studentName)}`,
+      `<p>${when ? this.escapeHtml(when) : ''}</p>
+       <p>${this.escapeHtml(report.summary)}</p>
+       ${section('Темы', report.topics)}
+       ${section('Что получилось', report.achievements)}
+       ${section('Сложности', report.difficulties)}
+       ${section('Домашнее задание', report.homework)}
+       ${section('К следующему уроку', report.recommendations)}
+       <p><a href="${link}">Открыть отчёт на сайте</a></p>`,
+    );
+  }
+
+  private homeworkHtml(
+    studentName: string,
+    when: string,
+    homework: string[],
+    link: string,
+  ) {
+    return this.wrapHtml(
+      `Домашнее задание: ${this.escapeHtml(studentName)}`,
+      `<p>${when ? this.escapeHtml(when) : ''}</p>
+       <ol>${homework.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('')}</ol>
+       <p><a href="${link}">Открыть урок</a></p>`,
+    );
+  }
+
+  private escapeHtml(value: string) {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   private wrapHtml(title: string, body: string) {

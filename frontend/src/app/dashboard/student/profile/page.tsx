@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { User, Lock, Mail } from 'lucide-react';
@@ -120,6 +120,8 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
+      <ParentContacts />
+
       {user?.hasPassword !== false && (
         <Card>
           <CardHeader>
@@ -139,5 +141,69 @@ export default function ProfilePage() {
         </Card>
       )}
     </div>
+  );
+}
+
+function ParentContacts() {
+  const [parentName, setParentName] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<{ parentName?: string | null; parentEmail?: string | null }>('/students/me')
+      .then((student) => {
+        setParentName(student.parentName || '');
+        setParentEmail(student.parentEmail || '');
+      })
+      .catch(() => undefined);
+  }, []);
+
+  const save = async (event: FormEvent) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await api.patch('/students/parents', { parentName, parentEmail });
+      toast.success('Контакты родителя сохранены');
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Не удалось сохранить';
+      toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Родитель</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={save} className="space-y-4">
+          <Input
+            label="Имя родителя"
+            placeholder="Мария"
+            value={parentName}
+            onChange={(event) => setParentName(event.target.value)}
+          />
+          <Input
+            label="Почта родителя"
+            type="email"
+            placeholder="parent@mail.ru"
+            value={parentEmail}
+            onChange={(event) => setParentEmail(event.target.value)}
+          />
+          <p className="text-xs leading-5 text-[rgb(var(--text-3))]">
+            После урока на эту почту придут отчёт и домашнее задание. Ссылка в
+            письме ведёт на сайт, а не остаётся только в этом кабинете.
+          </p>
+          <Button type="submit" isLoading={saving} variant="outline">
+            Сохранить контакты
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

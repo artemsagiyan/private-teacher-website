@@ -16,6 +16,7 @@ const typeIcon: Record<string, { icon: any; iconClass: string }> = {
   reminder_1h: { icon: Calendar, iconClass: 'icon-orange' },
   teacher_invitation: { icon: Bell, iconClass: 'icon-violet' },
   lesson_report_ready: { icon: BookOpen, iconClass: 'icon-green' },
+  homework_assigned: { icon: BookOpen, iconClass: 'icon-orange' },
   lesson_failed: { icon: Info, iconClass: 'icon-red' },
   schedule_changed: { icon: Info, iconClass: 'icon-orange' },
 };

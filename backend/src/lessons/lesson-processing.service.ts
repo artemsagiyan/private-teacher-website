@@ -249,15 +249,25 @@ export class LessonProcessingService {
     if (completed.affected) {
       await this.lessons.markBookingsCompleted(lesson.slotId);
       this.logger.log(`Lesson ${lesson.id} report is ready`);
-      await this.notifyReportReady(lesson);
+      await this.notifyReportReady(lesson, report);
     }
   }
 
-  private async notifyReportReady(lesson: Lesson) {
-    const recipients = new Set<string>();
-
+  private async notifyReportReady(lesson: Lesson, report: LessonReport) {
     if (lesson.teacher?.userId) {
-      recipients.add(lesson.teacher.userId);
+      try {
+        await this.notifications.notifyLessonReportReady(
+          lesson.teacher.userId,
+          lesson.id,
+          lesson.slot?.startTime,
+        );
+      } catch (error) {
+        this.logger.warn(
+          `Could not notify teacher about lesson ${lesson.id}: ${
+            error instanceof Error ? error.message : error
+          }`,
+        );
+      }
     }
 
     const bookings = await this.bookingRepo.find({
@@ -265,23 +275,27 @@ export class LessonProcessingService {
         { slotId: lesson.slotId, status: BookingStatus.COMPLETED },
         { slotId: lesson.slotId, status: BookingStatus.CONFIRMED },
       ],
-      relations: ['student'],
+      relations: ['student', 'student.user'],
     });
 
     for (const booking of bookings) {
-      if (booking.student?.userId) recipients.add(booking.student.userId);
-    }
-
-    for (const userId of recipients) {
+      const student = booking.student;
+      if (!student) continue;
+      const studentName = student.user
+        ? `${student.user.firstName ?? ''} ${student.user.lastName ?? ''}`.trim()
+        : 'ученик';
       try {
-        await this.notifications.notifyLessonReportReady(
-          userId,
-          lesson.id,
-          lesson.slot?.startTime,
-        );
+        await this.notifications.deliverLessonToFamily({
+          studentUserId: student.userId,
+          parentEmail: student.parentEmail,
+          studentName: studentName || 'ученик',
+          lessonId: lesson.id,
+          startTime: lesson.slot?.startTime,
+          report,
+        });
       } catch (error) {
         this.logger.warn(
-          `Could not notify ${userId} about lesson report: ${
+          `Could not deliver lesson ${lesson.id} to family: ${
             error instanceof Error ? error.message : error
           }`,
         );

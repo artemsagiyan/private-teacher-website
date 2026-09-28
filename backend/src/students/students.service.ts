@@ -58,6 +58,20 @@ export class StudentsService {
     return student.teacher;
   }
 
+  async updateParents(
+    userId: string,
+    data: { parentName?: string; parentEmail?: string },
+  ) {
+    const student = await this.findByUserId(userId);
+    if (data.parentName !== undefined) {
+      student.parentName = data.parentName.trim() || null;
+    }
+    if (data.parentEmail !== undefined) {
+      student.parentEmail = data.parentEmail.trim().toLowerCase() || null;
+    }
+    return this.studentRepository.save(student);
+  }
+
   async adminAssignTeacher(studentId: string, teacherId: string) {
     const student = await this.studentRepository.findOne({ where: { id: studentId } });
     if (!student) throw new NotFoundException('Ученик не найден');

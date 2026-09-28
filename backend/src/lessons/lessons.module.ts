@@ -10,6 +10,7 @@ import { Lesson } from './entities/lesson.entity';
 import { LessonProcessingService } from './lesson-processing.service';
 import { LessonsController } from './lessons.controller';
 import { LessonsService } from './lessons.service';
+import { PracticeService } from './practice.service';
 import { LivekitLifecycleService } from './livekit-lifecycle.service';
 
 @Module({
@@ -29,6 +30,7 @@ import { LivekitLifecycleService } from './livekit-lifecycle.service';
     LessonsService,
     LivekitLifecycleService,
     LessonProcessingService,
+    PracticeService,
   ],
   exports: [LessonsService, LivekitLifecycleService],
 })

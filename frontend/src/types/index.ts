@@ -79,6 +79,7 @@ export type NotificationType =
   | 'reminder_1h'
   | 'teacher_invitation'
   | 'lesson_report_ready'
+  | 'homework_assigned'
   | 'lesson_failed';
 
 export interface Notification {

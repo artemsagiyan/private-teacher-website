@@ -16,6 +16,7 @@ export enum NotificationType {
   REMINDER_1H = 'reminder_1h',
   TEACHER_INVITATION = 'teacher_invitation',
   LESSON_REPORT_READY = 'lesson_report_ready',
+  HOMEWORK_ASSIGNED = 'homework_assigned',
   LESSON_FAILED = 'lesson_failed',
 }
 

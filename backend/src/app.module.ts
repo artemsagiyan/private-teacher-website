@@ -28,6 +28,7 @@ import { StorageModule } from './storage/storage.module';
 import { HealthModule } from './health/health.module';
 import { InitialSchema1735776000000 } from './migrations/1735776000000-InitialSchema';
 import { LessonTimestamps1735777000000 } from './migrations/1735777000000-LessonTimestamps';
+import { ParentsHomeworkPractice1735778000000 } from './migrations/1735778000000-ParentsHomeworkPractice';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { LessonTimestamps1735777000000 } from './migrations/1735777000000-Lesson
           migrations: [
             InitialSchema1735776000000,
             LessonTimestamps1735777000000,
+            ParentsHomeworkPractice1735778000000,
           ],
           migrationsRun: isProd,
           synchronize: !isProd,

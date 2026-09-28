@@ -136,8 +136,8 @@ export default function LessonDetailsPage() {
       {['processing', 'ending'].includes(lesson.status) && (
         <div className="flex items-center gap-3 rounded-xl border border-indigo-500/20 bg-indigo-500/10 p-4 text-sm text-indigo-700 dark:text-indigo-300">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Аудио распознаётся, локальная модель готовит отчёт. Страница
-          обновится автоматически.
+          Аудио распознаётся, затем готовится отчёт. Страница обновится сама,
+          а письмо уйдёт ученику и родителю, если указана их почта.
         </div>
       )}
 
@@ -220,9 +220,23 @@ export default function LessonDetailsPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="mt-3 text-sm text-[rgb(var(--text-3))]">
-                    Не указано
-                  </p>
+                  <p className="mt-3 text-sm text-[rgb(var(--text-3))]">Нет данных</p>
+                )}
+                {key === 'homework' && user?.role === 'teacher' && (
+                  <HomeworkSender
+                    lessonId={id}
+                    initial={report.homework}
+                    onSent={(homework) =>
+                      setLesson((current) =>
+                        current && current.report && 'topics' in current.report
+                          ? {
+                              ...current,
+                              report: { ...current.report, homework },
+                            }
+                          : current,
+                      )
+                    }
+                  />
                 )}
               </section>
             ))}
@@ -256,6 +270,63 @@ export default function LessonDetailsPage() {
           Для этого урока отчёт не формировался.
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function HomeworkSender({
+  lessonId,
+  initial,
+  onSent,
+}: {
+  lessonId: string;
+  initial: string[];
+  onSent: (homework: string[]) => void;
+}) {
+  const [text, setText] = useState(initial.join('\n'));
+  const [sending, setSending] = useState(false);
+
+  const send = async () => {
+    const homework = text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean);
+    if (!homework.length) {
+      toast.error('Добавьте хотя бы одну строку задания');
+      return;
+    }
+    setSending(true);
+    try {
+      await api.post(`/lessons/${lessonId}/homework`, { homework });
+      onSent(homework);
+      toast.success('Домашнее задание отправлено ученику и родителю');
+    } catch (err: unknown) {
+      const message =
+        (err as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message || 'Не удалось отправить';
+      toast.error(message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="mt-4 space-y-2">
+      <textarea
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        rows={4}
+        placeholder="Каждая строка — отдельное задание"
+        className="w-full rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--bg))] px-3 py-2 text-sm"
+      />
+      <button
+        type="button"
+        disabled={sending}
+        onClick={() => void send()}
+        className="rounded-lg bg-primary-700 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
+      >
+        {sending ? 'Отправляем…' : 'Отправить домашнее задание'}
+      </button>
     </div>
   );
 }

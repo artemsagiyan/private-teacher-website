@@ -30,6 +30,12 @@ export class Student {
   @Column({ nullable: true })
   teacherId: string;
 
+  @Column({ type: 'varchar', nullable: true })
+  parentName: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  parentEmail: string | null;
+
   @OneToMany(() => Booking, (booking) => booking.student)
   bookings: Booking[];
 }

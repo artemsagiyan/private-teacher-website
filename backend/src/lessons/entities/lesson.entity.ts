@@ -38,6 +38,18 @@ export interface LessonReport {
   keyMoments: Array<{ time?: string; description: string }>;
 }
 
+export interface PracticeItem {
+  title: string;
+  task: string;
+  reason: string;
+}
+
+export interface PracticePlan {
+  summary: string;
+  items: PracticeItem[];
+  generatedAt: string;
+}
+
 @Entity('lessons')
 export class Lesson {
   @PrimaryGeneratedColumn('uuid')
@@ -90,6 +102,9 @@ export class Lesson {
 
   @Column({ type: 'jsonb', nullable: true })
   report: LessonReport;
+
+  @Column({ type: 'jsonb', nullable: true })
+  practicePlan: PracticePlan;
 
   @Column({ nullable: true })
   transcriptLanguage: string;
