@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Lightbulb, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '@/lib/api';
 
@@ -16,10 +16,12 @@ interface PracticePlan {
 }
 
 export function PracticePanel({ lessonId }: { lessonId: string }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const [plan, setPlan] = useState<PracticePlan | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [box, setBox] = useState<{ top: number; left: number } | null>(null);
 
   const load = async (refresh = false) => {
     setLoading(true);
@@ -45,9 +47,30 @@ export function PracticePanel({ lessonId }: { lessonId: string }) {
     void load(false);
   }, [lessonId]);
 
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const width = Math.min(384, window.innerWidth * 0.8);
+      setBox({
+        top: rect.bottom + 8,
+        left: Math.min(Math.max(8, rect.left), window.innerWidth - width - 8),
+      });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open, plan]);
+
   return (
     <div className="relative">
       <button
+        ref={buttonRef}
         type="button"
         onClick={() => (plan ? setOpen((value) => !value) : load(false))}
         className="inline-flex items-center gap-1.5 rounded-lg border border-[rgb(var(--border))] px-2.5 py-1 text-xs font-medium text-[rgb(var(--text))] hover:bg-[rgb(var(--surface-2))]"
@@ -60,7 +83,10 @@ export function PracticePanel({ lessonId }: { lessonId: string }) {
         Что решать
       </button>
       {open && (
-        <div className="absolute right-0 top-9 z-30 w-[min(24rem,80vw)] overflow-hidden rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
+        <div
+          className="fixed z-[80] max-h-[70vh] w-[min(24rem,80vw)] overflow-y-auto rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4 shadow-card"
+          style={{ top: box?.top ?? 48, left: box?.left ?? 16 }}
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-semibold text-[rgb(var(--text))]">
