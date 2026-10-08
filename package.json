@@ -14,5 +14,8 @@
     "test:api": "node test/api.test.mjs",
     "test:backend": "npm test --workspace=backend",
     "test": "npm run test:backend && node --test --experimental-strip-types test/api-error.test.ts test/lesson-join.test.ts"
+  },
+  "dependencies": {
+    "ssh2": "^1.17.0"
   }
 }
