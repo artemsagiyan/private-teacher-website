@@ -5,10 +5,10 @@ export const LESSON_JOIN_LATE_MS = 120 * 60_000;
 export const BOOKING_CANCEL_MIN_HOURS = 24;
 export const SLOT_DURATION_MS = 60 * 60_000;
 export const RECURRING_WEEKS = 4;
-export const CAL_SLOT_MIN = '08:00:00';
-export const CAL_SLOT_MAX = '22:00:00';
-export const CAL_HOURS_START = 8;
-export const CAL_HOURS_END = 22;
+export const CAL_SLOT_MIN = '00:00:00';
+export const CAL_SLOT_MAX = '24:00:00';
+export const CAL_HOURS_START = 0;
+export const CAL_HOURS_END = 24;
 
 export type LessonViewMode = 'video' | 'split' | 'board';
 

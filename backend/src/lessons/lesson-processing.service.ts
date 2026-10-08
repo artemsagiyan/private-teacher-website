@@ -163,6 +163,11 @@ export class LessonProcessingService {
       throw new Error('Аудиозапись ещё загружается в хранилище');
     }
 
+    if (this.config.get<string>('compute.apiUrl')) {
+      await this.processViaHomeGpu(lesson, leaseId);
+      return;
+    }
+
     let transcriptText: string;
     let transcriptKey = lesson.transcriptObjectKey;
     let transcriptLanguage = lesson.transcriptLanguage;
@@ -249,6 +254,65 @@ export class LessonProcessingService {
     if (completed.affected) {
       await this.lessons.markBookingsCompleted(lesson.slotId);
       this.logger.log(`Lesson ${lesson.id} report is ready`);
+      await this.notifyReportReady(lesson, report);
+    }
+  }
+
+  private async processViaHomeGpu(lesson: Lesson, leaseId: string) {
+    const audio = await this.storage.getBuffer(lesson.recordingObjectKey);
+    const apiUrl = this.config.get<string>('compute.apiUrl');
+    const secret = this.config.get<string>('compute.secret');
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'X-Compute-Token': secret,
+        'X-Lesson-Note': encodeURIComponent(lesson.slot?.note || ''),
+      },
+      body: new Uint8Array(audio),
+      signal: AbortSignal.timeout(40 * 60 * 1000),
+    });
+    if (!response.ok) {
+      throw new Error(
+        `Домашний GPU (${response.status}): ${(await response.text()).slice(0, 500)}`,
+      );
+    }
+    const result = (await response.json()) as {
+      transcript: TranscriptionResult;
+      report: LessonReport;
+    };
+    const transcript = result.transcript;
+    const report = result.report;
+    const transcriptText = this.formatTranscript(transcript);
+    const transcriptKey = `lessons/${lesson.id}/transcript.txt`;
+    const reportKey = `lessons/${lesson.id}/report.json`;
+    await Promise.all([
+      this.storage.putText(transcriptKey, transcriptText),
+      this.storage.putJson(`lessons/${lesson.id}/transcript.json`, transcript),
+      this.storage.putJson(reportKey, report),
+    ]);
+    const completed = await this.lessonRepo.update(
+      {
+        id: lesson.id,
+        status: LessonStatus.PROCESSING,
+        processingLeaseId: leaseId,
+      },
+      {
+        status: LessonStatus.COMPLETED,
+        transcriptObjectKey: transcriptKey,
+        reportObjectKey: reportKey,
+        transcriptLanguage: transcript.language,
+        transcriptDurationSeconds: transcript.duration,
+        report,
+        endedAt: lesson.endedAt || new Date(),
+        processingLeaseId: null,
+        processingError: null,
+        nextProcessingAt: null,
+      },
+    );
+    if (completed.affected) {
+      await this.lessons.markBookingsCompleted(lesson.slotId);
+      this.logger.log(`Lesson ${lesson.id} report came from the home GPU`);
       await this.notifyReportReady(lesson, report);
     }
   }

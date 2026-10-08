@@ -91,5 +91,9 @@ export default () => {
     url: process.env.OLLAMA_URL || 'http://localhost:11434',
     model: process.env.OLLAMA_MODEL || 'qwen3:8b',
   },
+  compute: {
+    apiUrl: process.env.COMPUTE_API_URL || '',
+    secret: process.env.COMPUTE_SECRET || '',
+  },
 };
 };

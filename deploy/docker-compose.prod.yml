@@ -53,6 +53,8 @@ services:
       SMTP_DISABLED: ${SMTP_DISABLED:-true}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      COMPUTE_API_URL: ${COMPUTE_API_URL:-}
+      COMPUTE_SECRET: ${COMPUTE_SECRET:-}
     ports:
       # Host :3001 is used by ekaterina-math.ru — bind backend to 3010
       - '127.0.0.1:3010:3001'

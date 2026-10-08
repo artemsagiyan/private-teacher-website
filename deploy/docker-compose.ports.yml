@@ -1,0 +1,46 @@
+# Fit the previous site onto the shared VPS.
+# Ports 3000-3002 stay with the existing Node sites.
+# MinIO images are built locally because Docker Hub no longer serves them.
+
+services:
+  postgres:
+    ports: !override
+      - "127.0.0.1:5433:5432"
+
+  minio:
+    build:
+      context: ./deploy/images/minio
+    image: tutor-minio:local
+    ports: !override
+      - "127.0.0.1:9010:9000"
+      - "127.0.0.1:9011:9001"
+
+  minio-init:
+    build:
+      context: ./deploy/images/mc
+    image: tutor-mc:local
+
+  backend:
+    ports: !override
+      - "127.0.0.1:3010:3001"
+    environment:
+      LIVEKIT_URL: ws://172.18.0.1:7880
+
+  frontend:
+    ports: !override
+      - "127.0.0.1:3012:3000"
+
+  redis:
+    ports: !override
+      - "127.0.0.1:6379:6379"
+
+  livekit:
+    network_mode: host
+    ports: !override []
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
+
+  ollama:
+    ports: !override
+      - "127.0.0.1:11434:11434"

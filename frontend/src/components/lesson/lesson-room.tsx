@@ -13,7 +13,7 @@ import {
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import '@excalidraw/excalidraw/index.css';
-import { Track } from 'livekit-client';
+import { DisconnectReason, Track } from 'livekit-client';
 import { ArrowLeft, Loader2, Video, PenLine, LayoutPanelLeft, MonitorOff, PictureInPicture2, PanelRight, Maximize2, Minimize2, StopCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { isPdfFile, pdfFileToImages } from '@/lib/pdf-to-images';
@@ -1334,9 +1334,17 @@ export function LessonRoom({
         video
         audio
         data-lk-theme="default"
-        onDisconnected={() => {
+        connectOptions={{ peerConnectionTimeout: 300_000 }}
+        options={{ disconnectOnPageLeave: false }}
+        onDisconnected={(reason) => {
           void boardFlushRef.current?.();
-          router.push(backHref);
+          if (
+            reason === DisconnectReason.ROOM_DELETED ||
+            reason === DisconnectReason.PARTICIPANT_REMOVED ||
+            reason === DisconnectReason.ROOM_CLOSED
+          ) {
+            router.push(backHref);
+          }
         }}
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >

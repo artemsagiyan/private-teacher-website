@@ -1,0 +1,31 @@
+# This VPS already serves three sites on host ports 3000, 3001 and 3002.
+# Keep those ports. Publish TutorPlatform beside them.
+
+services:
+  postgres:
+    ports: !override
+      - "127.0.0.1:5433:5432"
+
+  minio:
+    ports: !override
+      - "127.0.0.1:9010:9000"
+      - "127.0.0.1:9011:9001"
+
+  backend:
+    ports: !override
+      - "127.0.0.1:3010:3001"
+
+  frontend:
+    ports: !override
+      - "127.0.0.1:3012:3000"
+
+  livekit:
+    ports: !override
+      - "7880:7880"
+      - "7881:7881"
+      - "7882:7882/udp"
+      - "3478:3478/udp"
+
+  ollama:
+    ports: !override
+      - "127.0.0.1:11434:11434"
