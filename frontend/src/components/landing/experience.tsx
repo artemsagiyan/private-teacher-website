@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 type Scene = 'calendar' | 'board' | 'lesson' | 'report' | 'homework' | 'practice';
 
-const PENS = ['#6750A4', '#1D1B20', '#B3261E'];
+const PENS = ['#3F1116', '#64343C', '#9D7960'];
 
 const scenes: { id: Scene; title: string }[] = [
   { id: 'calendar', title: 'Своё расписание' },
@@ -66,17 +66,17 @@ export function LandingExperience() {
     >
       <div
         ref={glow}
-        className="pointer-events-none absolute left-0 top-0 z-0 h-[360px] w-[360px] rounded-full bg-[#6750A4]/10 blur-3xl"
+        className="pointer-events-none absolute left-0 top-0 z-0 h-[360px] w-[360px] rounded-full bg-[#3F1116]/10 blur-3xl"
         aria-hidden
       />
 
       <section className="relative z-10 mx-auto grid w-full max-w-6xl items-start gap-10 px-5 py-12 lg:grid-cols-[0.9fr_1.1fr] lg:py-16">
         <div>
-          <p className="text-sm font-medium text-[#6750A4]">Онлайн-занятия с репетитором</p>
+          <p className="text-sm font-medium text-[#3F1116]">Онлайн-занятия с репетитором</p>
           <h1 className="mt-3 max-w-xl text-4xl font-normal leading-[1.15] sm:text-5xl">
             Урок, доска и отчёт родителям — в одном кабинете
           </h1>
-          <p className="mt-5 max-w-lg text-base leading-7 text-[#49454F]">
+          <p className="mt-5 max-w-lg text-base leading-7 text-[#64343C]">
             Ученик записывается на свободное время. На доске можно рисовать сразу, расписание показывает занятую неделю.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -114,7 +114,7 @@ export function LandingExperience() {
               <button type="button" onClick={() => open('board')} className="text-left">
                 <IconTile><PenLine className="h-5 w-5" /></IconTile>
                 <h3 className="mt-4 text-lg font-medium">Общая доска</h3>
-                <p className="mt-1 text-sm leading-6 text-[#49454F]">Штрихов на доске: {strokes}.</p>
+                <p className="mt-1 text-sm leading-6 text-[#64343C]">Штрихов на доске: {strokes}.</p>
               </button>
               <div className="mt-4 flex gap-2">
                 {PENS.map((color) => (
@@ -126,7 +126,7 @@ export function LandingExperience() {
                       open('board');
                       setPen(color);
                     }}
-                    className={cn('h-8 w-8 rounded-lg border-2', pen === color ? 'border-[#1D1B20]' : 'border-transparent')}
+                    className={cn('h-8 w-8 rounded-lg border-2', pen === color ? 'border-[#64343C]' : 'border-transparent')}
                     style={{ background: color }}
                   />
                 ))}
@@ -140,20 +140,20 @@ export function LandingExperience() {
             <button type="button" onClick={() => open('report')} className={cardClass(scene === 'report')}>
               <IconTile><ClipboardList className="h-5 w-5" /></IconTile>
               <h3 className="mt-4 text-lg font-medium">Отчёт после занятия</h3>
-              <p className="mt-1 text-sm leading-6 text-[#49454F]">Пример: алгебра, 1 октября. Квадратные уравнения и теорема Пифагора.</p>
+              <p className="mt-1 text-sm leading-6 text-[#64343C]">Пример: алгебра, 1 октября. Квадратные уравнения и теорема Пифагора.</p>
             </button>
             <button type="button" onClick={() => open('homework')} className={cardClass(scene === 'homework')}>
               <IconTile><Mail className="h-5 w-5" /></IconTile>
               <h3 className="mt-4 text-lg font-medium">Домашнее задание</h3>
-              <p className="mt-1 text-sm leading-6 text-[#49454F]">ОГЭ, квадратные уравнения: от неполного к уравнению с коэффициентом.</p>
+              <p className="mt-1 text-sm leading-6 text-[#64343C]">ОГЭ, квадратные уравнения: от неполного к уравнению с коэффициентом.</p>
             </button>
             <button type="button" onClick={() => open('practice')} className={cardClass(scene === 'practice')}>
               <IconTile><BookOpen className="h-5 w-5" /></IconTile>
               <h3 className="mt-4 text-lg font-medium">Что решать на уроке</h3>
               <ul className="mt-3 space-y-2">
                 {lessonHints.slice(0, 3).map((item) => (
-                  <li key={item.task} className="text-sm leading-5 text-[#49454F]">
-                    <span className="font-medium text-[#1D1B20]">{item.task}.</span> {item.hint}
+                  <li key={item.task} className="text-sm leading-5 text-[#64343C]">
+                    <span className="font-medium text-[#64343C]">{item.task}.</span> {item.hint}
                   </li>
                 ))}
               </ul>
@@ -171,13 +171,13 @@ export function LandingExperience() {
               { n: '2', title: 'Ученик записывается и заходит в урок', text: 'Напоминание приходит за сутки и за час. Видео и доска открываются из кабинета.' },
               { n: '3', title: 'После урока уходит отчёт', text: 'Итоги и домашнее задание приходят ученику. Если указана почта родителя — и ему.' },
             ]).map(({ n, title, text }) => (
-              <li key={n} className="flex gap-4 rounded-lg bg-white p-5 shadow-card">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#E8DEF8] text-sm font-medium text-[#1D192B]">
+              <li key={n} className="flex gap-4 rounded-lg bg-[#9D7960] p-5 text-[#FFF1E9] shadow-card">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FFF1E9] text-sm font-medium text-[#64343C]">
                   {n}
                 </span>
                 <span>
                   <span className="block text-base font-medium">{title}</span>
-                  <span className="mt-1 block text-sm leading-6 text-[#49454F]">{text}</span>
+                  <span className="mt-1 block text-sm leading-6 text-[#FEEFDC]">{text}</span>
                 </span>
               </li>
             ))}
@@ -204,10 +204,10 @@ function Stage({
   onClear: () => void;
 }) {
   return (
-    <div id="stage" className="overflow-hidden rounded-lg bg-white shadow-card">
-      <div className="flex items-center gap-3 border-b border-[#E7E0EC] px-4 py-3">
+    <div id="stage" className="overflow-hidden rounded-lg bg-[#9D7960] shadow-card">
+      <div className="flex items-center gap-3 border-b border-[#9D7960] px-4 py-3">
         <img src="/swan.png" alt="" className="h-9 w-9 object-contain" />
-        <p className="text-sm font-medium">Живой кабинет</p>
+        <p className="text-sm font-medium text-[#FFF1E9]">Живой кабинет</p>
       </div>
       <div className="flex gap-1 overflow-x-auto px-3 py-2">
         {scenes.map((item) => (
@@ -217,14 +217,14 @@ function Stage({
             onClick={() => setScene(item.id)}
             className={cn(
               'shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium',
-              scene === item.id ? 'bg-[#6750A4] text-white' : 'text-[#49454F] hover:bg-[#F3EDF7]',
+              scene === item.id ? 'bg-[#3F1116] text-white' : 'text-[#FFF1E9] hover:bg-[#64343C]',
             )}
           >
             {item.title}
           </button>
         ))}
       </div>
-      <div className="h-[440px] overflow-hidden bg-[#F7F2FA] p-4">
+      <div className="h-[440px] overflow-hidden bg-[#FFF1E9] p-4">
         <div className={scene === 'board' ? 'h-full' : 'hidden'}>
           <BoardPane pen={pen} setPen={setPen} onStroke={onStroke} onClear={onClear} />
         </div>
@@ -283,13 +283,13 @@ function BoardPane({
             type="button"
             aria-label={`Цвет ${color}`}
             onClick={() => setPen(color)}
-            className={cn('h-8 w-8 rounded-lg border-2', pen === color ? 'border-[#1D1B20]' : 'border-transparent')}
+            className={cn('h-8 w-8 rounded-lg border-2', pen === color ? 'border-[#64343C]' : 'border-transparent')}
             style={{ background: color }}
           />
         ))}
         <button
           type="button"
-          className="ml-auto rounded-lg bg-white px-3 py-1.5 text-xs font-medium shadow-card"
+          className="ml-auto rounded-lg bg-[#9D7960] px-3 py-1.5 text-xs font-medium text-[#FFF1E9] shadow-card"
           onClick={() => {
             const node = canvas.current;
             const ctx = node?.getContext('2d');
@@ -304,7 +304,7 @@ function BoardPane({
         ref={canvas}
         width={900}
         height={420}
-        className="min-h-0 w-full flex-1 touch-none rounded-lg bg-white shadow-card"
+        className="min-h-0 w-full flex-1 touch-none rounded-lg bg-[#9D7960] shadow-card"
         onPointerDown={(event) => {
           const ctx = canvas.current?.getContext('2d');
           if (!ctx) return;
@@ -342,10 +342,10 @@ function ReportExample() {
     { title: 'К следующему уроку', items: ['Повторить формулу корней', 'Проговорить, когда дискриминант равен нулю'] },
   ];
   return (
-    <article className="h-full overflow-y-auto rounded-lg bg-white p-5 shadow-card">
-      <p className="text-xs font-medium text-[#6750A4]">Пример отчёта · 1 октября</p>
+    <article className="h-full overflow-y-auto rounded-lg bg-[#FEEFDC] p-5 shadow-card">
+      <p className="text-xs font-medium text-[#3F1116]">Пример отчёта · 1 октября</p>
       <h3 className="mt-1 text-lg font-medium">Алгебра, подготовка к ОГЭ</h3>
-      <p className="mt-3 text-sm leading-6 text-[#49454F]">
+      <p className="mt-3 text-sm leading-6 text-[#64343C]">
         Разобрали квадратные уравнения: дискриминант и разложение на множители.
         В конце урока нашли гипотенузу прямоугольного треугольника.
       </p>
@@ -355,8 +355,8 @@ function ReportExample() {
             <h4 className="text-sm font-medium">{block.title}</h4>
             <ul className="mt-2 space-y-1.5">
               {block.items.map((item) => (
-                <li key={item} className="flex gap-2 text-sm leading-5 text-[#49454F]">
-                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#6750A4]" />
+                <li key={item} className="flex gap-2 text-sm leading-5 text-[#64343C]">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[#3F1116]" />
                   {item}
                 </li>
               ))}
@@ -370,13 +370,13 @@ function ReportExample() {
 
 function HomeworkExample() {
   return (
-    <article className="h-full overflow-y-auto rounded-lg bg-white p-5 shadow-card">
-      <p className="text-xs font-medium text-[#6750A4]">ОГЭ · квадратные уравнения</p>
+    <article className="h-full overflow-y-auto rounded-lg bg-[#FEEFDC] p-5 shadow-card">
+      <p className="text-xs font-medium text-[#3F1116]">ОГЭ · квадратные уравнения</p>
       <h3 className="mt-1 text-lg font-medium">К следующему занятию</h3>
       <ol className="mt-4 space-y-3">
         {homeworkTasks.map((task, index) => (
           <li key={task} className="text-sm leading-6">
-            <span className="text-[#49454F]">{index + 1}. </span>
+            <span className="text-[#64343C]">{index + 1}. </span>
             {task}
           </li>
         ))}
@@ -387,14 +387,14 @@ function HomeworkExample() {
 
 function PracticeHints() {
   return (
-    <article className="h-full overflow-y-auto rounded-lg bg-white p-5 shadow-card">
-      <p className="text-xs font-medium text-[#6750A4]">Что решать на уроке</p>
+    <article className="h-full overflow-y-auto rounded-lg bg-[#FEEFDC] p-5 shadow-card">
+      <p className="text-xs font-medium text-[#3F1116]">Что решать на уроке</p>
       <h3 className="mt-1 text-lg font-medium">Подсказки к задачам</h3>
       <ul className="mt-4 space-y-3">
         {lessonHints.map((item) => (
           <li key={item.task} className="text-sm leading-6">
             <p className="font-medium">{item.task}</p>
-            <p className="text-[#49454F]">{item.hint}</p>
+            <p className="text-[#64343C]">{item.hint}</p>
           </li>
         ))}
       </ul>
@@ -404,14 +404,14 @@ function PracticeHints() {
 
 function cardClass(active: boolean) {
   return cn(
-    'flex h-full flex-col rounded-lg bg-white p-5 text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover',
-    active && 'ring-2 ring-[#6750A4]',
+    'flex h-full flex-col rounded-lg bg-[#FFF1E9] p-5 text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover',
+    active && 'ring-2 ring-[#3F1116]',
   );
 }
 
 function IconTile({ children }: { children: ReactNode }) {
   return (
-    <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#EADDFF] text-[#21005D]">
+    <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#FFF1E9] text-[#64343C]">
       {children}
     </span>
   );

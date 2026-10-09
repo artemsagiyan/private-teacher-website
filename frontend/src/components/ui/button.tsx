@@ -14,7 +14,7 @@ const buttonVariants = cva(
       variant: {
         default: [
           'bg-primary-600 text-white',
-          'hover:bg-primary-700 active:bg-primary-800',
+          'hover:bg-primary-800 active:bg-primary-800',
         ].join(' '),
         outline: [
           'border border-primary-600 bg-transparent text-primary-600',
@@ -26,15 +26,15 @@ const buttonVariants = cva(
           'hover:bg-primary-50',
           'active:bg-primary-100',
         ].join(' '),
-        destructive: 'bg-[#B3261E] text-white hover:bg-[#8C1D18] active:bg-[#601410]',
+        destructive: 'bg-[#3F1116] text-[#FFF1E9] hover:bg-[#64343C] active:bg-[#64343C]',
         secondary: [
           'bg-primary-100 text-primary-900',
-          'hover:bg-primary-200 active:bg-primary-300',
+          'hover:bg-primary-300 active:bg-primary-300',
         ].join(' '),
         link: 'text-primary-600 underline-offset-4 hover:underline p-0 h-auto',
         gradient: [
           'bg-primary-600 text-white',
-          'hover:bg-primary-700 active:bg-primary-800',
+          'hover:bg-primary-800 active:bg-primary-800',
         ].join(' '),
       },
       size: {

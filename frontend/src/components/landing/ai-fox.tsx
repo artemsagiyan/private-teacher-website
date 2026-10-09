@@ -6,7 +6,7 @@ export function AiFox() {
         alt="Лебедь, знак ТвойМатПлан"
         className="h-28 w-28 object-contain sm:h-36 sm:w-36"
       />
-      <figcaption className="max-w-[14rem] text-sm leading-6 text-[#49454F]">
+      <figcaption className="max-w-[14rem] text-sm leading-6 text-[#64343C]">
         Знак сервиса. Подбирает задачи к уроку и собирает отчёт.
       </figcaption>
     </figure>

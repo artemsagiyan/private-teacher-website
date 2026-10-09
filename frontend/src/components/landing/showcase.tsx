@@ -267,7 +267,7 @@ export function LandingShowcase() {
                         )}
                       >
                         <p className="text-sm font-medium">{time}</p>
-                        <p className={cn('mt-1 text-[11px]', isBooked ? 'text-white/80' : 'text-[rgb(var(--text-3))]')}>
+                        <p className={cn('mt-1 text-[11px]', isBooked ? 'text-[#FEEFDC]' : 'text-[rgb(var(--text-3))]')}>
                           {label}
                         </p>
                       </button>
@@ -278,14 +278,14 @@ export function LandingShowcase() {
 
               {scene === 'lesson' && (
                 <div className="grid gap-2 animate-fade-in sm:grid-cols-[1.1fr_0.9fr]">
-                  <div className="relative overflow-hidden rounded-2xl bg-[rgb(var(--sidebar-bg))] p-4 text-white">
-                    <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2 py-1 text-[10px] uppercase tracking-wider">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-red-400" />
+                  <div className="relative overflow-hidden rounded-2xl bg-[#3F1116] p-4 text-[#FFF1E9]">
+                    <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[#9D7960] px-2 py-1 text-[10px] uppercase tracking-wider text-[#FFF1E9]">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#3F1116]" />
                       В эфире
                     </span>
-                    <Video className="mt-8 h-8 w-8 text-white/80" />
+                    <Video className="mt-8 h-8 w-8 text-[#FFF1E9]" />
                     <p className="mt-3 font-display text-2xl">Физика</p>
-                    <p className="text-xs text-white/60">
+                    <p className="text-xs text-[#FEEFDC]">
                       {booked ? `${booked} · вы в уроке` : '18:00 · механика'}
                     </p>
                   </div>
@@ -297,13 +297,13 @@ export function LandingShowcase() {
                       <path
                         d="M12 78 C40 20, 70 100, 100 48 S140 30, 150 62"
                         fill="none"
-                        stroke="rgb(20 99 92)"
+                        stroke="#3F1116"
                         strokeWidth="3"
                         strokeLinecap="round"
                         className="motion-safe:animate-dash"
                         style={{ strokeDasharray: 220 }}
                       />
-                      <circle cx="100" cy="48" r="4" fill="rgb(20 99 92)" />
+                      <circle cx="100" cy="48" r="4" fill="#3F1116" />
                     </svg>
                   </div>
                 </div>

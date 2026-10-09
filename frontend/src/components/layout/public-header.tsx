@@ -10,7 +10,7 @@ export function PublicHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-[#FEF7FF]/90 shadow-[0_1px_2px_rgba(0,0,0,0.08)] backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-[#9D7960] bg-[#FEEFDC]">
       <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-5">
         <Link href="/" className="flex items-center gap-2.5">
           <img src="/swan.png" alt="" className="h-10 w-10 object-contain" />

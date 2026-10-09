@@ -22,7 +22,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${sans.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" forcedTheme="light" defaultTheme="light" enableSystem={false}>
           {children}
-          <Toaster richColors position="top-right" />
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              style: {
+                background: '#FFF1E9',
+                color: '#64343C',
+                border: '1px solid #9D7960',
+              },
+            }}
+          />
         </ThemeProvider>
       </body>
     </html>

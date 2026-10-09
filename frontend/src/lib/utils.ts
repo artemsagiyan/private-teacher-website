@@ -25,11 +25,15 @@ export function timeAgo(date: string | Date) {
 
 export function getSlotColor(status: string) {
   switch (status) {
-    case 'available': return '#10b981';
-    case 'booked':    return '#157a45';
-    case 'cancelled': return '#ef4444';
-    default:          return '#6b7280';
+    case 'available': return '#9D7960';
+    case 'booked':    return '#3F1116';
+    case 'cancelled': return '#64343C';
+    default:          return '#9D7960';
   }
+}
+
+export function getSlotTextColor(status: string) {
+  return status === 'available' ? '#3F1116' : '#FFF1E9';
 }
 
 export function fullName(user?: { firstName?: string; lastName?: string }) {

@@ -11,7 +11,7 @@ export function Wordmark({
     <span
       className={cn(
         'font-medium tracking-tight',
-        light ? 'text-white' : 'text-black',
+        light ? 'text-[#FFF1E9]' : 'text-[#64343C]',
         className,
       )}
     >

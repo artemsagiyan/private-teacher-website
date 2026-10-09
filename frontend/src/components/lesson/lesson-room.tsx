@@ -18,6 +18,14 @@ import { ArrowLeft, Loader2, Video, PenLine, LayoutPanelLeft, MonitorOff, Pictur
 import { toast } from 'sonner';
 import { isPdfFile, pdfFileToImages } from '@/lib/pdf-to-images';
 import { api } from '@/lib/api';
+import {
+  WB_BROADCAST_MS,
+  WB_PAYLOAD_MAX,
+  changedElements,
+  chunkBoardElements,
+  elementSyncKey,
+  isNewerElement,
+} from '@/lib/board-sync';
 import { PracticePanel } from '@/components/lesson/practice-panel';
 import type { LessonStatus } from '@/types';
 
@@ -28,8 +36,6 @@ const DOCK_COMPACT = 240;
 const PIP_W = 300;
 const PIP_H = 220;
 const WB_FILE_SYNC_MAX = 8_000;
-/** LiveKit data messages are capped (~15KB); stay under that. */
-const WB_PAYLOAD_MAX = 14_000;
 
 // ─── Excalidraw: browser-only, no SSR ───────────────────────────────────────
 const ExcalidrawComponent = dynamic(
@@ -96,6 +102,15 @@ function WhiteboardPanel({
       ? crypto.randomUUID()
       : Math.random().toString(36).slice(2),
   );
+  const sentSyncRef = useRef(new Map<string, string>());
+  const sentFilesRef = useRef(new Set<string>());
+  const filesInFlightRef = useRef(new Set<string>());
+  const pendingSceneRef = useRef<{
+    elements: readonly any[];
+    files?: Record<string, any>;
+  } | null>(null);
+  const sendingRef = useRef(false);
+  const sendDirtyRef = useRef(false);
   const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
   const latestSceneRef = useRef<{
     elements: readonly any[];
@@ -222,7 +237,7 @@ function WhiteboardPanel({
     }
     for (const element of local.elements || []) {
       const previous = elements.get(element.id);
-      if (!previous || (element.version || 0) >= (previous.version || 0)) {
+      if (!previous || isNewerElement(element, previous)) {
         elements.set(element.id, element);
       }
     }
@@ -309,93 +324,162 @@ function WhiteboardPanel({
     [buildSnapshot, enqueueSave],
   );
 
+  const applyRemoteElements = useCallback(
+    (incoming: any[]) => {
+      const excalidrawApi = apiRef.current;
+      if (!excalidrawApi || !incoming?.length) return;
+      const localElements =
+        excalidrawApi.getSceneElementsIncludingDeleted?.() ||
+        excalidrawApi.getSceneElements();
+      const merged = mergeSnapshots(
+        { elements: incoming, files: {}, revision: 0 },
+        { elements: localElements, files: excalidrawApi.getFiles?.() || {} },
+      );
+      for (const remote of incoming) {
+        const kept = merged.elements.find((element: any) => element.id === remote.id);
+        if (kept && elementSyncKey(kept) === elementSyncKey(remote)) {
+          sentSyncRef.current.set(remote.id, elementSyncKey(remote));
+        }
+      }
+      skipRef.current = true;
+      excalidrawApi.updateScene({
+        elements: merged.elements,
+        captureUpdate: 'NEVER',
+      });
+      persistBoard(
+        merged.elements,
+        excalidrawApi.getAppState(),
+        excalidrawApi.getFiles?.() || {},
+      );
+    },
+    [mergeSnapshots, persistBoard],
+  );
+
   const { send } = useDataChannel('wb', (msg) => {
-    void (async () => {
-      try {
-        const payload = JSON.parse(dec.current.decode(msg.payload));
-        if (!apiRef.current) return;
-        skipRef.current = true;
-        const remoteFiles = payload.files?.length
-          ? await resolveRemoteFiles(payload.files)
-          : [];
-        if (remoteFiles.length) {
+    let payload: { elements?: any[]; files?: any[] };
+    try {
+      payload = JSON.parse(dec.current.decode(msg.payload));
+    } catch {
+      return;
+    }
+    if (payload.elements?.length) applyRemoteElements(payload.elements);
+    if (payload.files?.length) {
+      void resolveRemoteFiles(payload.files).then((remoteFiles) => {
+        if (remoteFiles.length && apiRef.current) {
           apiRef.current.addFiles(remoteFiles);
         }
-        if (payload.elements) {
-          const localElements =
-            apiRef.current.getSceneElementsIncludingDeleted?.() ||
-            apiRef.current.getSceneElements();
-          const merged = mergeSnapshots(
-            {
-              elements: payload.elements,
-              files: Object.fromEntries(
-                remoteFiles.map((file: any) => [file.id, file]),
-              ),
-              revision: payload.revision,
-            },
-            {
-              elements: localElements,
-              files: apiRef.current.getFiles?.() || {},
-            },
-          );
-          apiRef.current.updateScene({
-            elements: merged.elements,
-            captureUpdate: 'NEVER',
-          });
-          persistBoard(
-            merged.elements,
-            apiRef.current.getAppState(),
-            merged.files,
-          );
-        }
-      } catch {
-        /* ignore malformed */
-      }
-    })();
+      });
+    }
   });
+
+  const publishBoardPayload = useCallback(
+    async (payload: { elements: any[]; files: any[] }) => {
+      const body = enc.current.encode(JSON.stringify(payload));
+      if (body.byteLength > WB_PAYLOAD_MAX) return false;
+      await send(body, { reliable: true });
+      return true;
+    },
+    [send],
+  );
+
+  const publishChangedElements = useCallback(
+    async (elements: readonly any[]) => {
+      const pending = changedElements(elements, sentSyncRef.current);
+      if (!pending.length) return;
+      const chunks = chunkBoardElements(pending);
+      const sentIds = new Set(chunks.flat().map((element) => element.id));
+      for (const chunk of chunks) {
+        const delivered = await publishBoardPayload({ elements: chunk, files: [] });
+        if (!delivered) throw new Error('board sync packet was not delivered');
+      }
+      for (const element of pending) {
+        if (sentIds.has(element.id)) {
+          sentSyncRef.current.set(element.id, elementSyncKey(element));
+        }
+      }
+    },
+    [publishBoardPayload],
+  );
+
+  const publishNewFiles = useCallback(
+    async (files?: Record<string, any>) => {
+      if (!files) return;
+      const fresh = Object.values(files).filter(
+        (file) =>
+          file?.id &&
+          !sentFilesRef.current.has(file.id) &&
+          !filesInFlightRef.current.has(file.id),
+      );
+      if (!fresh.length) return;
+      for (const file of fresh) filesInFlightRef.current.add(file.id);
+      try {
+        const packed: any[] = [];
+        for (const file of fresh) {
+          const next = await packFileForSync(file);
+          if (next) packed.push(next);
+        }
+        let batch: any[] = [];
+        const flush = async () => {
+          if (!batch.length) return;
+          const delivered = await publishBoardPayload({ elements: [], files: batch });
+          if (!delivered) return;
+          for (const file of batch) sentFilesRef.current.add(file.id);
+          batch = [];
+        };
+        for (const file of packed) {
+          const next = [...batch, file];
+          if (
+            batch.length &&
+            enc.current.encode(JSON.stringify({ elements: [], files: next })).byteLength >
+              WB_PAYLOAD_MAX
+          ) {
+            await flush();
+            batch = [file];
+          } else {
+            batch = next;
+          }
+        }
+        await flush();
+      } finally {
+        for (const file of fresh) filesInFlightRef.current.delete(file.id);
+      }
+    },
+    [packFileForSync, publishBoardPayload],
+  );
+
+  const flushLiveBoard = useCallback(async () => {
+    if (sendingRef.current) {
+      sendDirtyRef.current = true;
+      return;
+    }
+    sendingRef.current = true;
+    try {
+      do {
+        sendDirtyRef.current = false;
+        const pending = pendingSceneRef.current;
+        if (!pending) break;
+        await publishChangedElements(pending.elements);
+        void publishNewFiles(pending.files).catch(() => undefined);
+      } while (sendDirtyRef.current);
+    } catch {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => {
+        void flushLiveBoard();
+      }, 300);
+    } finally {
+      sendingRef.current = false;
+    }
+  }, [publishChangedElements, publishNewFiles]);
 
   const broadcast = useCallback(
     (elements: readonly any[], files?: Record<string, any>) => {
+      pendingSceneRef.current = { elements, files };
       if (timerRef.current) clearTimeout(timerRef.current);
       timerRef.current = setTimeout(() => {
-        void (async () => {
-          const fileList: any[] = [];
-          if (files) {
-            for (const f of Object.values(files)) {
-              const packed = await packFileForSync(f);
-              if (packed) fileList.push(packed);
-            }
-          }
-
-          const encode = (payload: { elements: any[]; files: any[] }) =>
-            enc.current.encode(JSON.stringify(payload));
-
-          let body = encode({
-            elements: [...elements],
-            files: fileList,
-          });
-          if (body.byteLength > WB_PAYLOAD_MAX && fileList.length) {
-            body = encode({ elements: [...elements], files: [] });
-          }
-          if (body.byteLength > WB_PAYLOAD_MAX) {
-            toast.message(
-              'Доска слишком большая для мгновенной синхронизации — сохраняем на сервер',
-            );
-            return;
-          }
-
-          try {
-            const result = send(body, {});
-            void Promise.resolve(result).catch(() => {
-              /* room not ready / publish failed */
-            });
-          } catch {
-            /* room not ready */
-          }
-        })();
-      }, 200);
+        void flushLiveBoard();
+      }, WB_BROADCAST_MS);
     },
-    [packFileForSync, send],
+    [flushLiveBoard],
   );
 
   const handleChange = useCallback(
@@ -425,20 +509,33 @@ function WhiteboardPanel({
         if (scene.files && Object.keys(scene.files).length) {
           excalidrawApi.addFiles(Object.values(scene.files));
         }
-        if (scene.elements?.length || scene.appState) {
+        const localElements =
+          excalidrawApi.getSceneElementsIncludingDeleted?.() ||
+          excalidrawApi.getSceneElements();
+        const merged = mergeSnapshots(
+          { elements: scene.elements || [], files: scene.files || {}, revision: scene.revision },
+          { elements: localElements, files: excalidrawApi.getFiles?.() || {} },
+        );
+        if (merged.elements.length || scene.appState) {
           skipRef.current = true;
           excalidrawApi.updateScene({
-            elements: scene.elements || [],
+            elements: merged.elements,
             appState: scene.appState || {},
             captureUpdate: 'NEVER',
           });
+        }
+        for (const remote of scene.elements || []) {
+          const kept = merged.elements.find((element: any) => element.id === remote.id);
+          if (kept && elementSyncKey(kept) === elementSyncKey(remote)) {
+            sentSyncRef.current.set(remote.id, elementSyncKey(remote));
+          }
         }
       } catch (error) {
         boardLoadedRef.current = false;
         console.warn('Не удалось загрузить сохранённую доску', error);
       }
     },
-    [lessonId],
+    [lessonId, mergeSnapshots],
   );
 
   useEffect(() => {
@@ -475,8 +572,9 @@ function WhiteboardPanel({
 
         for (const remote of scene.elements || []) {
           const local = merged.get(remote.id);
-          if (!local || (remote.version || 0) > (local.version || 0)) {
+          if (isNewerElement(remote, local)) {
             merged.set(remote.id, remote);
+            sentSyncRef.current.set(remote.id, elementSyncKey(remote));
             changed = true;
           }
         }
@@ -493,7 +591,7 @@ function WhiteboardPanel({
       }
     };
 
-    const interval = window.setInterval(mergeFromStorage, 5_000);
+    const interval = window.setInterval(mergeFromStorage, 1_000);
     return () => {
       cancelled = true;
       window.clearInterval(interval);
@@ -1506,11 +1604,11 @@ export function LessonRoom({
             className={[
               'min-h-0 overflow-hidden',
               showPip
-                ? 'absolute z-40 rounded-xl border border-white/15 bg-[#111] shadow-2xl shadow-black/40'
+                ? 'absolute z-40 rounded-xl border border-[#9D7960] bg-[#64343C] shadow-2xl shadow-[0_16px_40px_rgb(63_17_22/0.4)]'
                 : viewMode === 'video'
                   ? 'absolute inset-0'
                   : showDock
-                    ? 'absolute top-0 right-0 bottom-0 border-l border-[rgb(var(--border))] bg-[#111]'
+                    ? 'absolute top-0 right-0 bottom-0 border-l border-[rgb(var(--border))] bg-[#64343C]'
                     : 'absolute pointer-events-none opacity-0',
               !dragging && !showPip && viewMode !== 'split' ? 'transition-[width] duration-300 ease-out' : '',
             ].join(' ')}
@@ -1537,10 +1635,10 @@ export function LessonRoom({
                 onPointerDown={onPipDragStart}
                 className={[
                   'flex items-center gap-2 h-8 px-2 shrink-0 cursor-grab active:cursor-grabbing touch-none',
-                  'bg-[#1a1a1a] border-b border-white/10 select-none',
+                  'bg-[#64343C] border-b border-white/10 select-none',
                 ].join(' ')}
               >
-                <span className="flex-1 text-[11px] text-white/70 truncate">Видео</span>
+                <span className="flex-1 text-[11px] text-[#FFF1E9] truncate">Видео</span>
                 <button
                   type="button"
                   onClick={(e) => {
@@ -1548,7 +1646,7 @@ export function LessonRoom({
                     closePip();
                   }}
                   onPointerDown={(e) => e.stopPropagation()}
-                  className="text-[11px] text-white/80 hover:text-white px-1.5 py-0.5 rounded hover:bg-white/10"
+                  className="text-[11px] text-[#FFF1E9] hover:text-[#64343C] px-1.5 py-0.5 rounded hover:bg-[#9D7960]"
                   title="Вернуть в панель"
                 >
                   В панель
@@ -1561,7 +1659,7 @@ export function LessonRoom({
               <button
                 type="button"
                 onClick={openPip}
-                className="absolute inset-x-2 top-2 z-20 rounded-md bg-black/70 text-white text-[11px] px-2 py-1.5 hover:bg-black/85 transition-colors"
+                className="absolute inset-x-2 top-2 z-20 rounded-md bg-[#3F1116] text-[#FFF1E9] text-[11px] px-2 py-1.5 hover:bg-[#64343C] transition-colors"
               >
                 Нажмите — мини-окно
               </button>

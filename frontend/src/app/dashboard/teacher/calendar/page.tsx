@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { CalendarSlot, LessonType } from '@/types';
-import { cn, formatDateTime, getSlotColor } from '@/lib/utils';
+import { cn, formatDateTime, getSlotColor, getSlotTextColor } from '@/lib/utils';
 import {
   CAL_HOURS_END,
   CAL_HOURS_START,
@@ -212,7 +212,7 @@ export default function TeacherCalendarPage() {
         end: s.endTime,
         backgroundColor: getSlotColor(s.status),
         borderColor: 'transparent',
-        textColor: '#fff',
+        textColor: getSlotTextColor(s.status),
         extendedProps: { slot: s },
       })),
     [slots],
@@ -636,9 +636,9 @@ export default function TeacherCalendarPage() {
 
           <CalendarLegend
             items={[
-              { color: '#10b981', label: 'Свободно' },
-              { color: '#6750A4', label: 'Занято' },
-              { color: '#ef4444', label: 'Отменено' },
+              { color: '#9D7960', label: 'Свободно' },
+              { color: '#3F1116', label: 'Занято' },
+              { color: '#64343C', label: 'Отменено' },
             ]}
             showRecurringHint
           />

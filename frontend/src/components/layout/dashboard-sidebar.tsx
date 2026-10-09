@@ -90,14 +90,14 @@ function NavLink({
       className={cn(
         'flex items-center gap-3 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors',
         active
-          ? 'bg-[#E8DEF8] text-[#1D192B]'
-          : 'text-[rgb(var(--text-2))] hover:bg-[#E7E0EC] hover:text-[rgb(var(--text))]',
+          ? 'bg-[#3F1116] text-[#FFF1E9]'
+          : 'text-[rgb(var(--text-2))] hover:bg-[#9D7960] hover:text-[#FFF1E9]',
       )}
     >
       <item.icon
         className={cn(
           'h-4 w-4 shrink-0',
-          active ? 'text-[#1D192B]' : 'text-[rgb(var(--text-3))]',
+          active ? 'text-[#FFF1E9]' : 'text-[rgb(var(--text-3))]',
         )}
       />
       <span className="truncate">{item.label}</span>

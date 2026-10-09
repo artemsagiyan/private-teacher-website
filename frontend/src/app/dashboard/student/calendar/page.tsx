@@ -93,9 +93,9 @@ export default function StudentCalendarPage() {
         b.slot.lessonType === 'individual' ? 'Моё занятие' : 'Групповое',
       start: b.slot.startTime,
       end: b.slot.endTime,
-      backgroundColor: '#6750A4',
+      backgroundColor: '#3F1116',
       borderColor: 'transparent',
-      textColor: '#fff',
+      textColor: '#FFF1E9',
       classNames: ['my-booking-event'],
       extendedProps: { type: 'booking' as const, booking: b },
     }));
@@ -112,9 +112,9 @@ export default function StudentCalendarPage() {
           .join(' '),
         start: s.startTime,
         end: s.endTime,
-        backgroundColor: '#10b981',
+        backgroundColor: '#9D7960',
         borderColor: 'transparent',
-        textColor: '#fff',
+        textColor: '#3F1116',
         extendedProps: { type: 'slot' as const, slot: s },
       }));
 
@@ -122,7 +122,8 @@ export default function StudentCalendarPage() {
     return [
       ...myEvents.map((e) => ({
         ...e,
-        backgroundColor: '#5cb886',
+        backgroundColor: '#9D7960',
+        textColor: '#3F1116',
         classNames: ['my-booking-dim'],
       })),
       ...freeEvents,
@@ -132,7 +133,7 @@ export default function StudentCalendarPage() {
   return (
     <div className="space-y-4">
       <style>{`
-        .my-booking-event { box-shadow: 0 0 12px rgb(99 102 241 / 0.35) !important; }
+        .my-booking-event { box-shadow: 0 0 12px rgb(63 17 22 / 0.35) !important; }
         .my-booking-dim { opacity: 0.55 !important; }
       `}</style>
 
@@ -192,9 +193,9 @@ export default function StudentCalendarPage() {
         <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           <CalendarLegend
             items={[
-              { color: '#6750A4', label: 'Моё занятие', glow: true },
+              { color: '#3F1116', label: 'Моё занятие', glow: true },
               ...(mode === 'book'
-                ? [{ color: '#10b981', label: 'Свободный слот' }]
+                ? [{ color: '#9D7960', label: 'Свободный слот' }]
                 : []),
             ]}
             showRecurringHint={mode === 'book'}

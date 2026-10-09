@@ -1,5 +1,25 @@
 import type { Config } from 'tailwindcss';
 
+const ivory = '#FFF1E9';
+const beige = '#FEEFDC';
+const taupe = '#9D7960';
+const plum = '#64343C';
+const cranberry = '#3F1116';
+
+const palette = {
+  50: ivory,
+  100: ivory,
+  200: beige,
+  300: taupe,
+  400: taupe,
+  500: cranberry,
+  600: cranberry,
+  700: cranberry,
+  800: plum,
+  900: plum,
+  950: cranberry,
+};
+
 const config: Config = {
   darkMode: 'class',
   content: [
@@ -10,28 +30,46 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        white: ivory,
+        black: cranberry,
         primary: {
-          50:  '#F6EDFF',
-          100: '#EADDFF',
-          200: '#D0BCFF',
-          300: '#B69DF8',
-          400: '#9A82DB',
-          500: '#7F67BE',
-          600: '#6750A4',
-          700: '#4F378B',
-          800: '#381E72',
-          900: '#21005D',
+          50: ivory,
+          100: ivory,
+          200: beige,
+          300: taupe,
+          400: taupe,
+          500: cranberry,
+          600: cranberry,
+          700: cranberry,
+          800: plum,
+          900: plum,
         },
-        violet: {
-          400: '#a78bfa',
-          500: '#8b5cf6',
-          600: '#7c3aed',
-        },
+        violet: palette,
+        indigo: palette,
+        red: palette,
+        rose: palette,
+        emerald: palette,
+        green: palette,
+        amber: palette,
+        yellow: palette,
+        orange: palette,
+        sky: palette,
+        cyan: palette,
+        blue: palette,
+        zinc: palette,
+        slate: palette,
+        gray: palette,
+        neutral: palette,
+        purple: palette,
+        fuchsia: palette,
+        pink: palette,
+        teal: palette,
+        lime: palette,
         surface: {
-          DEFAULT: '#ffffff',
-          2: '#f8f8fc',
-          dark: '#0e0e1c',
-          dark2: '#13131f',
+          DEFAULT: ivory,
+          2: taupe,
+          dark: plum,
+          dark2: cranberry,
         },
       },
       borderRadius: {
@@ -61,16 +99,16 @@ const config: Config = {
         dash: 'dash 1s ease forwards',
       },
       boxShadow: {
-        'glow': '0 1px 3px rgb(0 0 0 / 0.15), 0 1px 2px rgb(0 0 0 / 0.3)',
-        'glow-lg': '0 4px 8px 3px rgb(0 0 0 / 0.15), 0 1px 3px rgb(0 0 0 / 0.3)',
-        'card': '0 1px 2px rgb(0 0 0 / 0.08), 0 2px 6px 2px rgb(103 80 164 / 0.08)',
-        'card-hover': '0 2px 6px 2px rgb(0 0 0 / 0.15)',
-        'sidebar': '1px 0 0 0 rgb(255 255 255 / 0.05)',
+        'glow': '0 1px 3px rgb(63 17 22 / 0.22), 0 1px 2px rgb(100 52 60 / 0.28)',
+        'glow-lg': '0 4px 8px 3px rgb(63 17 22 / 0.22), 0 1px 3px rgb(100 52 60 / 0.28)',
+        'card': '0 1px 2px rgb(100 52 60 / 0.12), 0 2px 6px 2px rgb(63 17 22 / 0.1)',
+        'card-hover': '0 2px 6px 2px rgb(63 17 22 / 0.2)',
+        'sidebar': '1px 0 0 0 #9D7960',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'grid-pattern': 'linear-gradient(rgb(0 0 0 / 0.03) 1px, transparent 1px), linear-gradient(90deg, rgb(0 0 0 / 0.03) 1px, transparent 1px)',
-        'grid-pattern-dark': 'linear-gradient(rgb(255 255 255 / 0.03) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.03) 1px, transparent 1px)',
+        'grid-pattern': 'linear-gradient(rgb(157 121 96 / 0.45) 1px, transparent 1px), linear-gradient(90deg, rgb(157 121 96 / 0.45) 1px, transparent 1px)',
+        'grid-pattern-dark': 'linear-gradient(rgb(255 241 233 / 0.16) 1px, transparent 1px), linear-gradient(90deg, rgb(255 241 233 / 0.16) 1px, transparent 1px)',
         'noise': "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E\")",
       },
     },
