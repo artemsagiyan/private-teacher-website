@@ -1,0 +1,82 @@
+services:
+  transcriber:
+    build:
+      context: ../transcriber
+      dockerfile: Dockerfile.cuda
+    gpus: all
+    environment:
+      WHISPER_MODEL: ${WHISPER_MODEL:-large-v3-turbo}
+      WHISPER_DEVICE: cuda
+      WHISPER_COMPUTE_TYPE: float16
+      WHISPER_BEAM_SIZE: ${WHISPER_BEAM_SIZE:-1}
+      WHISPER_REALTIME_BEAM_SIZE: ${WHISPER_REALTIME_BEAM_SIZE:-1}
+      WHISPER_MAX_CONCURRENCY: ${WHISPER_MAX_CONCURRENCY:-1}
+      WHISPER_DOWNLOAD_TIMEOUT_SECONDS: ${WHISPER_DOWNLOAD_TIMEOUT_SECONDS:-7200}
+      HF_HOME: /models
+    volumes:
+      - compute_worker_whisper:/models
+    healthcheck:
+      test:
+        - CMD
+        - python3
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 15s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    gpus: all
+    volumes:
+      - compute_worker_ollama:/root/.ollama
+    healthcheck:
+      test: ['CMD', 'ollama', 'list']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+    entrypoint: /bin/sh
+    command: ['-c', 'ollama pull "$$OLLAMA_MODEL"']
+    depends_on:
+      ollama:
+        condition: service_healthy
+    restart: 'no'
+
+  compute-bot:
+    build: .
+    env_file:
+      - .env
+    environment:
+      OLLAMA_URL: http://ollama:11434
+      TRANSCRIBER_URL: http://transcriber:8000
+      TRANSCRIBER_FETCH_HOST: compute-bot.local
+      TRANSCRIBER_FETCH_BIND: 0.0.0.0
+      POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-3000}
+      HEARTBEAT_FAILURE_LIMIT: ${HEARTBEAT_FAILURE_LIMIT:-2}
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-16384}
+      LOCAL_AUDIO_DIR: /data/audio
+    volumes:
+      # Persistent local archive on D:\job\website-data\audio.
+      - ../../../website-data/audio:/data/audio
+    depends_on:
+      transcriber:
+        condition: service_healthy
+      ollama-pull:
+        condition: service_completed_successfully
+    networks:
+      default:
+        aliases:
+          - compute-bot.local
+    restart: unless-stopped
+
+volumes:
+  compute_worker_whisper:
+  compute_worker_ollama:

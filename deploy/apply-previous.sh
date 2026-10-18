@@ -52,13 +52,15 @@ rtc:
   use_external_ip: true
   node_ip: 195.161.62.2
 redis:
-  address: redis:6379
+  # LiveKit runs with host networking in the shared-VPS compose override.
+  address: 127.0.0.1:6379
 keys:
   ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
 webhook:
   api_key: ${LIVEKIT_API_KEY}
   urls:
-    - http://backend:3001/api/lessons/livekit-webhook
+    # LiveKit runs with host networking in this shared-VPS deployment.
+    - http://127.0.0.1:3010/api/lessons/livekit-webhook
 turn:
   enabled: true
   domain: www.ekaterina-math.ru
@@ -73,7 +75,7 @@ api_secret: ${LIVEKIT_API_SECRET}
 ws_url: ws://livekit:7880
 insecure: true
 redis:
-  address: redis:6379
+  address: 127.0.0.1:6379
 health_port: 8080
 prometheus_port: 8081
 backup_storage: /out

@@ -88,9 +88,9 @@ export default function AdminCalendarPage() {
         <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           <CalendarLegend
             items={[
-              { color: '#9D7960', label: 'Свободно' },
-              { color: '#3F1116', label: 'Занято' },
-              { color: '#64343C', label: 'Отменено' },
+              { color: 'rgb(var(--brand-warm))', label: 'Свободно' },
+              { color: 'rgb(var(--brand-deep))', label: 'Занято' },
+              { color: 'rgb(var(--primary-500))', label: 'Отменено' },
             ]}
             showRecurringHint
           />

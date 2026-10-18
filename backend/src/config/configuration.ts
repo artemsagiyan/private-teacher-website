@@ -82,6 +82,7 @@ export default () => {
     region: process.env.MINIO_REGION || 'us-east-1',
     egressEndpoint:
       process.env.MINIO_EGRESS_ENDPOINT || 'http://localhost:9010',
+    localAudioArchiveDir: process.env.LOCAL_AUDIO_ARCHIVE_DIR || '',
   },
   transcription: {
     url: process.env.TRANSCRIBER_URL || 'http://localhost:8000',
@@ -90,8 +91,12 @@ export default () => {
   ollama: {
     url: process.env.OLLAMA_URL || 'http://localhost:11434',
     model: process.env.OLLAMA_MODEL || 'qwen3:8b',
+    // Keep the context bounded so a long lesson cannot monopolise the local GPU.
+    // Long transcripts are reduced in chunks before the final report prompt.
+    contextWindow: parseInt(process.env.OLLAMA_NUM_CTX, 10) || 16384,
   },
   compute: {
+    mode: process.env.COMPUTE_MODE || 'local',
     apiUrl: process.env.COMPUTE_API_URL || '',
     secret: process.env.COMPUTE_SECRET || '',
   },

@@ -5,21 +5,21 @@ import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
   [
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium tracking-normal',
-    'transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold tracking-normal',
+    'transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
     'disabled:pointer-events-none disabled:opacity-40 select-none',
   ].join(' '),
   {
     variants: {
       variant: {
         default: [
-          'bg-primary-600 text-white',
-          'hover:bg-primary-800 active:bg-primary-800',
+          'bg-primary-600 text-[rgb(var(--primary-fg))] shadow-[0_8px_18px_rgb(63_17_22/0.18)]',
+          'hover:-translate-y-0.5 hover:bg-primary-800 hover:shadow-[0_12px_24px_rgb(63_17_22/0.24)] active:translate-y-0 active:bg-primary-800',
         ].join(' '),
         outline: [
-          'border border-primary-600 bg-transparent text-primary-600',
-          'hover:bg-primary-50',
-          'active:bg-primary-100',
+          'border border-[rgb(var(--border))] bg-[rgb(var(--surface)/0.65)] text-primary-700',
+          'hover:-translate-y-0.5 hover:border-primary-500 hover:bg-primary-50 hover:shadow-card',
+          'active:translate-y-0 active:bg-primary-100',
         ].join(' '),
         ghost: [
           'text-primary-600',
@@ -33,8 +33,8 @@ const buttonVariants = cva(
         ].join(' '),
         link: 'text-primary-600 underline-offset-4 hover:underline p-0 h-auto',
         gradient: [
-          'bg-primary-600 text-white',
-          'hover:bg-primary-800 active:bg-primary-800',
+          'theme-primary text-[rgb(var(--primary-fg))]',
+          'hover:-translate-y-0.5 active:translate-y-0',
         ].join(' '),
       },
       size: {

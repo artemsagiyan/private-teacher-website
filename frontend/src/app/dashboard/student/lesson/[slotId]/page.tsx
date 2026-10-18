@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { api } from '@/lib/api';
+import { resolveLivekitUrl } from '@/lib/livekit-url';
 import { LessonRoom } from '@/components/lesson/lesson-room';
 import { parseLessonViewMode } from '@/lib/lesson';
 import type { LessonStatus } from '@/types';
@@ -66,10 +67,9 @@ export default function StudentLessonPage() {
       .then((data) =>
         setConnection({
           ...data,
-          livekitUrl:
-            data.url ||
-            process.env.NEXT_PUBLIC_LIVEKIT_URL ||
-            'ws://localhost:7890',
+          livekitUrl: resolveLivekitUrl(
+            data.url || process.env.NEXT_PUBLIC_LIVEKIT_URL,
+          ),
         }),
       )
       .catch((err) => {

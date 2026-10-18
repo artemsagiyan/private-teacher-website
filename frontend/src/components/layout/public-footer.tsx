@@ -3,17 +3,17 @@ import { Wordmark } from '@/components/layout/wordmark';
 
 export function PublicFooter() {
   return (
-    <footer className="mt-4 bg-[#64343C] text-[#FFF1E9]">
-      <div className="mx-auto flex max-w-6xl flex-col gap-6 px-5 py-10 sm:flex-row sm:items-start sm:justify-between">
+    <footer className="relative mt-10 overflow-hidden bg-[#3F1116] text-[#FFF1E9]">
+      <div className="relative mx-auto flex max-w-7xl flex-col gap-10 px-5 py-14 lg:flex-row lg:items-start lg:justify-between lg:px-8">
         <div>
-          <Wordmark className="text-[#FFF1E9]" />
-          <p className="mt-2 max-w-xs text-sm text-[#FEEFDC]">
+          <Wordmark className="text-lg text-[#FFF1E9]" />
+          <p className="mt-3 max-w-xs text-sm leading-6 text-[#FEEFDC]/75">
             Кабинет для занятий с репетитором: урок, доска, отчёт и домашнее задание.
           </p>
         </div>
-        <div className="flex gap-8 text-sm">
+        <div className="flex gap-14 text-sm">
           <div className="space-y-2">
-            <p className="font-semibold">Сайт</p>
+            <p className="mb-3 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#9D7960]">Сайт</p>
             <Link href="/#how" className="block text-[#FEEFDC] hover:text-[#FFF1E9]">
               Как проходит занятие
             </Link>
@@ -25,7 +25,7 @@ export function PublicFooter() {
             </Link>
           </div>
           <div className="space-y-2">
-            <p className="font-semibold">Кабинет</p>
+            <p className="mb-3 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-[#9D7960]">Кабинет</p>
             <Link href="/auth/login" className="block text-[#FEEFDC] hover:text-[#FFF1E9]">
               Войти
             </Link>
@@ -35,7 +35,7 @@ export function PublicFooter() {
           </div>
         </div>
       </div>
-      <div className="border-t border-[#9D7960] px-5 py-4 text-center text-xs text-[#FEEFDC]">
+      <div className="relative border-t border-[#9D7960]/30 px-5 py-5 text-center text-xs text-[#FEEFDC]/60">
         © {new Date().getFullYear()} ТвойМатПлан
       </div>
     </footer>

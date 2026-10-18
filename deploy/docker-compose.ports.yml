@@ -11,6 +11,11 @@ services:
     build:
       context: ./deploy/images/minio
     image: tutor-minio:local
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:9000/minio/health/live >/dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 20
     ports: !override
       - "127.0.0.1:9010:9000"
       - "127.0.0.1:9011:9001"
@@ -24,6 +29,8 @@ services:
     ports: !override
       - "127.0.0.1:3010:3001"
     environment:
+      # LiveKit uses host networking in production; the host gateway is
+      # reachable from the backend container for RoomService/Egress calls.
       LIVEKIT_URL: ws://172.18.0.1:7880
 
   frontend:

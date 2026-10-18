@@ -6,15 +6,18 @@ import { useRouter } from 'next/navigation';
 import {
   LiveKitRoom,
   VideoConference,
+  VideoTrack,
   RoomAudioRenderer,
   useDataChannel,
   useLocalParticipant,
   useRoomContext,
+  useTracks,
 } from '@livekit/components-react';
 import '@livekit/components-styles';
 import '@excalidraw/excalidraw/index.css';
 import { DisconnectReason, Track } from 'livekit-client';
-import { ArrowLeft, Loader2, Video, PenLine, LayoutPanelLeft, MonitorOff, PictureInPicture2, PanelRight, Maximize2, Minimize2, StopCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, Video, PenLine, LayoutPanelLeft, MonitorOff, PictureInPicture2, PanelRight, Maximize2, Minimize2, StopCircle, Mic, MicOff, QrCode, Copy, Smartphone, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { isPdfFile, pdfFileToImages } from '@/lib/pdf-to-images';
 import { api } from '@/lib/api';
@@ -85,9 +88,11 @@ const ExcalidrawComponent = dynamic(
 function WhiteboardPanel({
   lessonId,
   onRegisterFlush,
+  onBoardText,
 }: {
   lessonId: string;
   onRegisterFlush?: (flush: (() => Promise<void>) | null) => void;
+  onBoardText?: (text: string) => void;
 }) {
   const apiRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -484,6 +489,7 @@ function WhiteboardPanel({
 
   const handleChange = useCallback(
     (elements: readonly any[], appState: any, files: Record<string, any>) => {
+      onBoardText?.(elements.filter((element: any) => !element.isDeleted && element.text).map((element: any) => element.text).join(' '));
       persistBoard(elements, appState, files);
       if (skipRef.current) {
         skipRef.current = false;
@@ -491,7 +497,7 @@ function WhiteboardPanel({
       }
       broadcast(elements, files);
     },
-    [broadcast, persistBoard],
+    [broadcast, onBoardText, persistBoard],
   );
 
   const loadSavedBoard = useCallback(
@@ -1126,6 +1132,42 @@ function StopScreenShareButton() {
   );
 }
 
+function MicrophoneToggle() {
+  const { isMicrophoneEnabled, localParticipant } = useLocalParticipant();
+  const [changing, setChanging] = useState(false);
+
+  const toggleMicrophone = async () => {
+    setChanging(true);
+    try {
+      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+    } catch {
+      toast.error('Не удалось изменить состояние микрофона');
+    } finally {
+      setChanging(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={() => void toggleMicrophone()}
+      disabled={changing}
+      aria-pressed={isMicrophoneEnabled}
+      aria-label={isMicrophoneEnabled ? 'Выключить микрофон' : 'Включить микрофон'}
+      title={isMicrophoneEnabled ? 'Выключить микрофон' : 'Включить микрофон'}
+      className={[
+        'flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-60',
+        isMicrophoneEnabled
+          ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20'
+          : 'border-red-500/35 bg-red-500/10 text-red-700 hover:bg-red-500/20',
+      ].join(' ')}
+    >
+      {isMicrophoneEnabled ? <Mic className="h-3.5 w-3.5" /> : <MicOff className="h-3.5 w-3.5" />}
+      <span className="hidden sm:inline">{isMicrophoneEnabled ? 'Микрофон включён' : 'Микрофон выключен'}</span>
+    </button>
+  );
+}
+
 // ─── View mode toggle ────────────────────────────────────────────────────────
 
 type ViewMode = 'video' | 'split' | 'board';
@@ -1135,6 +1177,175 @@ const VIEW_MODES: { mode: ViewMode; Icon: typeof Video; label: string }[] = [
   { mode: 'split', Icon: LayoutPanelLeft, label: 'Видео + Доска' },
   { mode: 'board', Icon: PenLine, label: 'Доска' },
 ];
+
+/** Renders phone notebook cameras as a live, movable window over the shared board. */
+function NotebookCameraBoardOverlay({ rightOffset }: { rightOffset: number }) {
+  const cameraTracks = useTracks([Track.Source.Camera], { onlySubscribed: true });
+  const cameraTrack = cameraTracks
+    .filter(
+      (track) =>
+        track.participant.identity.startsWith('camera-') &&
+        Boolean(track.publication.track),
+    )
+    .at(-1);
+  const [collapsed, setCollapsed] = useState(false);
+  const [dragging, setDragging] = useState(false);
+  const [resizing, setResizing] = useState(false);
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [frameWidth, setFrameWidth] = useState(280);
+  const [position, setPosition] = useState({ x: 16, y: 16 });
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const resizeRef = useRef({ startX: 0, startWidth: 280 });
+
+  // A phone can reconnect with a new identity while LiveKit still exposes the
+  // old publication for one render. Keep the overlay bound to the newest
+  // camera publication and force a fresh video element when it changes.
+  const cameraKey = cameraTrack
+    ? `${cameraTrack.participant.identity}:${cameraTrack.publication.trackSid || cameraTrack.publication.source}`
+    : 'no-camera';
+
+  const aspectRatio = orientation === 'portrait' ? 9 / 16 : 16 / 9;
+  const maxFrameWidth = (ratio = aspectRatio) => {
+    const stage = overlayRef.current?.parentElement;
+    if (!stage) return 560;
+    const widthLimit = stage.clientWidth - rightOffset - 32;
+    // Keep a portrait frame usable on short laptop screens as well.
+    const heightLimit = Math.max(180, (stage.clientHeight - 72) * ratio);
+    return Math.max(180, Math.min(560, widthLimit, heightLimit));
+  };
+
+  const toggleOrientation = () => {
+    const next = orientation === 'portrait' ? 'landscape' : 'portrait';
+    const nextRatio = next === 'portrait' ? 9 / 16 : 16 / 9;
+    setOrientation(next);
+    setFrameWidth((width) => Math.min(next === 'portrait' ? 360 : 480, width, maxFrameWidth(nextRatio)));
+  };
+
+  const toggleSize = () => {
+    const maxWidth = maxFrameWidth();
+    setFrameWidth((width) => (width < maxWidth - 24 ? maxWidth : orientation === 'portrait' ? 280 : 360));
+  };
+
+  const startResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    resizeRef.current = { startX: event.clientX, startWidth: frameWidth };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setResizing(true);
+  };
+
+  const resizeOverlay = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!resizing) return;
+    const width = resizeRef.current.startWidth + event.clientX - resizeRef.current.startX;
+    setFrameWidth(Math.min(maxFrameWidth(), Math.max(180, width)));
+  };
+
+  const finishResize = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    setResizing(false);
+  };
+
+  const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest('button')) return;
+    event.preventDefault();
+    const rect = overlayRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    dragOffsetRef.current = { x: event.clientX - rect.left, y: event.clientY - rect.top };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragging(true);
+  };
+
+  const moveOverlay = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    const overlay = overlayRef.current;
+    const stage = overlay?.parentElement;
+    if (!overlay || !stage) return;
+    const stageRect = stage.getBoundingClientRect();
+    const maxX = Math.max(8, stage.clientWidth - rightOffset - overlay.offsetWidth - 8);
+    const maxY = Math.max(8, stage.clientHeight - overlay.offsetHeight - 8);
+    setPosition({
+      x: Math.min(maxX, Math.max(8, event.clientX - stageRect.left - dragOffsetRef.current.x)),
+      y: Math.min(maxY, Math.max(8, event.clientY - stageRect.top - dragOffsetRef.current.y)),
+    });
+  };
+
+  if (!cameraTrack) return null;
+
+  return (
+    <div
+      ref={overlayRef}
+      data-testid="notebook-camera-board-overlay"
+      className="notebook-camera-board-overlay absolute z-20 overflow-hidden rounded-xl border border-[rgb(var(--border))] bg-black shadow-xl"
+      style={{
+        left: position.x,
+        top: position.y,
+        right: 'auto',
+        width: `min(${frameWidth}px, calc(100% - ${rightOffset + 32}px))`,
+      }}
+    >
+      <div
+        className={`flex h-9 items-center gap-1.5 border-b border-white/10 bg-[#3F1116] px-2 text-[#FFF1E9] ${dragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        onPointerDown={startDrag}
+        onPointerMove={moveOverlay}
+        onPointerUp={() => setDragging(false)}
+        onPointerCancel={() => setDragging(false)}
+      >
+        <span className="h-2 w-2 shrink-0 animate-pulse rounded-full bg-emerald-400" aria-hidden="true" />
+        <span className="min-w-0 flex-1 truncate text-[11px] font-medium">Камера тетради · на доске</span>
+        <button
+          type="button"
+          className="rounded p-1 hover:bg-white/10"
+          aria-label={orientation === 'portrait' ? 'Переключить на альбомный формат' : 'Переключить на формат телефона'}
+          title={orientation === 'portrait' ? 'Альбомный формат' : 'Формат телефона'}
+          onClick={toggleOrientation}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <RotateCw className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          className="rounded p-1 hover:bg-white/10"
+          aria-label={frameWidth < maxFrameWidth() - 24 ? 'Увеличить камеру' : 'Уменьшить камеру'}
+          title={frameWidth < maxFrameWidth() - 24 ? 'Увеличить' : 'Уменьшить'}
+          onClick={toggleSize}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          {frameWidth < maxFrameWidth() - 24 ? <ZoomIn className="h-3.5 w-3.5" /> : <ZoomOut className="h-3.5 w-3.5" />}
+        </button>
+        <button
+          type="button"
+          className="rounded px-1.5 py-1 text-[11px] hover:bg-white/10"
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed((value) => !value)}
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          {collapsed ? 'Показать' : 'Свернуть'}
+        </button>
+      </div>
+      {!collapsed && (
+        <div
+          className="notebook-camera-board-video w-full bg-black"
+          style={{ aspectRatio: `${aspectRatio}` }}
+        >
+          <VideoTrack key={cameraKey} trackRef={cameraTrack} className="h-full w-full object-contain" />
+          <button
+            type="button"
+            className={`notebook-camera-board-resize ${resizing ? 'is-resizing' : ''}`}
+            aria-label="Изменить размер окна камеры"
+            title="Потяните, чтобы изменить размер"
+            onPointerDown={startResize}
+            onPointerMove={resizeOverlay}
+            onPointerUp={finishResize}
+            onPointerCancel={finishResize}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Main exported component ─────────────────────────────────────────────────
 
@@ -1204,11 +1415,53 @@ export function LessonRoom({
   const [pipPos, setPipPos] = useState({ x: 24, y: 24 });
   const [pipDragging, setPipDragging] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [liveAssist, setLiveAssist] = useState<any>(null);
+  const [liveAssistState, setLiveAssistState] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [speechEnabled, setSpeechEnabled] = useState(false);
+  const [streamingVoice, setStreamingVoice] = useState(false);
+  const [cameraLink, setCameraLink] = useState<string | null>(null);
+  const [cameraQrOpen, setCameraQrOpen] = useState(false);
+  const [cameraLinkLoading, setCameraLinkLoading] = useState(false);
+  const [roomDisconnected, setRoomDisconnected] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const speechRef = useRef<any>(null);
+  const assistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const boardFlushRef = useRef<(() => Promise<void>) | null>(null);
   const dockWidthRef = useRef(dockWidth);
   const pipDragOffset = useRef({ x: 0, y: 0 });
+
+  const openCameraQr = useCallback(async () => {
+    setCameraLinkLoading(true);
+    try {
+      const result = await api.post<{ code: string }>('/video/camera-link', {
+        lessonId,
+      });
+      const url = new URL('/lesson-camera', window.location.origin);
+      url.searchParams.set('code', result.code);
+      setCameraLink(url.toString());
+      setCameraQrOpen(true);
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message ||
+          'Не удалось подготовить подключение камеры',
+      );
+    } finally {
+      setCameraLinkLoading(false);
+    }
+  }, [lessonId]);
+
+  const copyCameraLink = useCallback(async () => {
+    if (!cameraLink) return;
+    try {
+      await navigator.clipboard.writeText(cameraLink);
+      toast.success('Ссылка камеры скопирована');
+    } catch {
+      toast.error('Не удалось скопировать ссылку');
+    }
+  }, [cameraLink]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1331,6 +1584,75 @@ export function LessonRoom({
     [pip],
   );
 
+  const requestLiveAssist = useCallback((boardText = '') => {
+    if (!isTeacher || lessonStatus !== 'active') return;
+    if (assistTimerRef.current) clearTimeout(assistTimerRef.current);
+    assistTimerRef.current = setTimeout(() => {
+      setLiveAssistState('loading');
+      void api.post(`/learning/lessons/${lessonId}/live-assist`, { context: '', boardText })
+        .then((result) => { setLiveAssist(result); setLiveAssistState('ready'); })
+        .catch(() => setLiveAssistState('error'));
+    }, 1500);
+  }, [isTeacher, lessonId, lessonStatus]);
+
+  useEffect(() => () => {
+    if (assistTimerRef.current) clearTimeout(assistTimerRef.current);
+    speechRef.current?.stop();
+    mediaRecorderRef.current?.stop();
+    audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
+
+  const toggleStreamingVoice = useCallback(async () => {
+    if (streamingVoice) {
+      mediaRecorderRef.current?.stop();
+      audioStreamRef.current?.getTracks().forEach((track) => track.stop());
+      mediaRecorderRef.current = null;
+      audioStreamRef.current = null;
+      setStreamingVoice(false);
+      return;
+    }
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      toast.error('Браузер не поддерживает потоковую запись');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+      recorder.ondataavailable = async (event) => {
+        if (!event.data.size) return;
+        const bytes = new Uint8Array(await event.data.arrayBuffer());
+        let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
+        try {
+          const result = await api.post<{ text?: string }>(`/lessons/${lessonId}/realtime-transcript`, { audioBase64: btoa(binary) });
+          if (result.text?.trim()) requestLiveAssist(result.text.trim());
+        } catch { setLiveAssistState('error'); }
+      };
+      recorder.start(5_000);
+      mediaRecorderRef.current = recorder;
+      audioStreamRef.current = stream;
+      setStreamingVoice(true);
+    } catch { toast.error('Не удалось включить микрофон для ИИ-помощника'); }
+  }, [lessonId, requestLiveAssist, streamingVoice]);
+
+  useEffect(() => {
+    if (!isTeacher || !speechEnabled || typeof window === 'undefined') return;
+    const Speech = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Speech) { setSpeechEnabled(false); toast.error('В этом браузере недоступна потоковая расшифровка речи'); return; }
+    const recognition = new Speech();
+    recognition.lang = 'ru-RU';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.onresult = (event: any) => {
+      const text = Array.from(event.results).slice(Math.max(0, event.resultIndex - 2)).map((result: any) => result[0]?.transcript || '').join(' ');
+      if (text.trim()) requestLiveAssist(text.trim());
+    };
+    recognition.onerror = () => setLiveAssistState('error');
+    recognition.onend = () => { if (speechEnabled) { try { recognition.start(); } catch {} } };
+    speechRef.current = recognition;
+    try { recognition.start(); } catch { setLiveAssistState('error'); }
+    return () => { recognition.onend = null; recognition.stop(); speechRef.current = null; };
+  }, [isTeacher, requestLiveAssist, speechEnabled]);
+
   const onResizeStart = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragging(true);
@@ -1417,7 +1739,7 @@ export function LessonRoom({
   return (
     <div
       ref={rootRef}
-      className="lesson-room flex flex-col"
+      className="lesson-room relative flex flex-col"
       style={
         {
           height: isFullscreen ? '100%' : 'calc(100vh - 56px)',
@@ -1425,7 +1747,13 @@ export function LessonRoom({
         } as CSSProperties
       }
     >
+      {!livekitUrl && (
+        <div className="flex flex-1 items-center justify-center bg-[rgb(var(--bg))] p-6 text-center text-sm text-red-700">
+          Не настроен адрес видеосервера. Обратитесь к администратору.
+        </div>
+      )}
       <LiveKitRoom
+        key={`${lessonId}:${token}`}
         serverUrl={livekitUrl}
         token={token}
         connect
@@ -1434,7 +1762,9 @@ export function LessonRoom({
         data-lk-theme="default"
         connectOptions={{ peerConnectionTimeout: 300_000 }}
         options={{ disconnectOnPageLeave: false }}
+        onConnected={() => setRoomDisconnected(false)}
         onDisconnected={(reason) => {
+          setRoomDisconnected(true);
           void boardFlushRef.current?.();
           if (
             reason === DisconnectReason.ROOM_DELETED ||
@@ -1446,6 +1776,18 @@ export function LessonRoom({
         }}
         style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
       >
+        {roomDisconnected && (
+          <div className="absolute inset-x-4 top-14 z-30 flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-50 px-3 py-2 text-xs text-amber-900 shadow-sm">
+            <span>Связь прервалась. Переподключаемся…</span>
+            <button
+              type="button"
+              className="rounded border border-amber-700/30 px-2 py-1 font-medium hover:bg-amber-100"
+              onClick={() => window.location.reload()}
+            >
+              Повторить
+            </button>
+          </div>
+        )}
         {/* Header bar */}
         <div className="flex items-center gap-3 px-4 h-11 shrink-0 border-b border-[rgb(var(--border))] bg-[rgb(var(--surface))]">
           <button
@@ -1460,6 +1802,36 @@ export function LessonRoom({
             {title}
           </span>
           {isTeacher && <PracticePanel lessonId={lessonId} />}
+          {isTeacher &&
+            !['completed', 'failed', 'processing', 'ending'].includes(
+              lessonStatus,
+            ) && (
+              <button
+                type="button"
+                onClick={() => void openCameraQr()}
+                disabled={cameraLinkLoading}
+                aria-label="Показать QR-код для камеры телефона"
+                className="flex shrink-0 items-center gap-1.5 rounded-md border border-primary-300 bg-primary-50 px-2.5 py-1 text-xs font-medium text-primary-700 transition-colors hover:bg-primary-100 disabled:opacity-60 dark:border-primary-800 dark:bg-primary-950/40 dark:text-primary-300"
+                title="Показать QR-код для камеры телефона"
+              >
+                {cameraLinkLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <QrCode className="h-3.5 w-3.5" />
+                )}
+                <span className="text-[10px] font-semibold md:hidden">QR</span>
+                <span className="hidden md:inline">Камера тетради</span>
+              </button>
+            )}
+          {isTeacher && <button type="button" onClick={() => setSpeechEnabled((value) => !value)} className="hidden rounded-md border border-[rgb(var(--border))] px-2 py-1 text-[11px] text-[rgb(var(--text-2))] hover:bg-[rgb(var(--surface-2))] lg:inline">{speechEnabled ? 'Остановить ИИ-речь' : 'Включить ИИ-речь'}</button>}
+          {isTeacher && <button type="button" onClick={() => void toggleStreamingVoice()} className="hidden rounded-md border border-[rgb(var(--border))] px-2 py-1 text-[11px] text-[rgb(var(--text-2))] hover:bg-[rgb(var(--surface-2))] lg:inline">{streamingVoice ? 'Остановить микрофон ИИ' : 'Потоковый ИИ'}</button>}
+          {isTeacher && liveAssistState === 'loading' && <span className="hidden rounded-md border border-[rgb(var(--border))] px-2 py-1 text-[11px] text-[rgb(var(--text-3))] lg:inline">ИИ анализирует…</span>}
+          {isTeacher && liveAssistState === 'error' && <span className="hidden rounded-md border border-red-500/20 bg-red-500/10 px-2 py-1 text-[11px] text-red-700 lg:inline">ИИ временно недоступен</span>}
+          {isTeacher && liveAssist?.suggestion && liveAssistState === 'ready' && (
+            <button type="button" className="hidden max-w-[280px] truncate rounded-md border border-[rgb(var(--border))] bg-[rgb(var(--surface-2))] px-2 py-1 text-left text-[11px] text-[rgb(var(--text-2))] lg:block" title={liveAssist.suggestion.task} onClick={() => toast.info(liveAssist.suggestion.task)}>
+              ИИ: {liveAssist.suggestion.task}
+            </button>
+          )}
           <span
             className={[
               'flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium',
@@ -1473,6 +1845,7 @@ export function LessonRoom({
           </span>
           <span className="flex-1" />
 
+          <MicrophoneToggle />
           <StopScreenShareButton />
 
           {isTeacher &&
@@ -1573,8 +1946,13 @@ export function LessonRoom({
             <WhiteboardPanel
               lessonId={lessonId}
               onRegisterFlush={registerBoardFlush}
+              onBoardText={(text) => requestLiveAssist(text)}
             />
           </div>
+
+          {viewMode !== 'video' && (
+            <NotebookCameraBoardOverlay rightOffset={showDock ? dockWidth + 16 : 16} />
+          )}
 
           {/* Resize handle */}
           {showDock && (
@@ -1677,6 +2055,76 @@ export function LessonRoom({
           </div>
         </div>
       </LiveKitRoom>
+
+      {cameraQrOpen && cameraLink && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 p-4"
+          role="presentation"
+          onClick={() => setCameraQrOpen(false)}
+        >
+          <section
+            className="w-full max-w-sm rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-5 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="camera-qr-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-500/12 text-primary-600">
+                <Smartphone className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 id="camera-qr-title" className="text-base font-semibold text-[rgb(var(--text))]">
+                  Трансляция тетради с телефона
+                </h2>
+                <p className="mt-1 text-xs leading-5 text-[rgb(var(--text-2))]">
+                  Отсканируйте QR-код телефоном, разрешите доступ к камере и направьте её на тетрадь.
+                </p>
+              </div>
+            </div>
+            <div className="mx-auto mt-4 flex w-fit rounded-xl bg-white p-3 shadow-sm">
+              <QRCodeSVG
+                value={cameraLink}
+                size={260}
+                level="M"
+                marginSize={2}
+                title="QR-код для подключения камеры телефона"
+              />
+            </div>
+            <div className="mt-3 rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--surface-2))] p-3">
+              <p className="text-xs font-medium text-[rgb(var(--text-2))]">Если QR-код не сканируется, откройте ссылку вручную:</p>
+              <a
+                href={cameraLink}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 block break-all text-[11px] text-primary-700 underline dark:text-primary-300"
+              >
+                {cameraLink}
+              </a>
+            </div>
+            <p className="mt-3 text-center text-[11px] leading-5 text-[rgb(var(--text-3))]">
+              Код действует 10 минут и подключает только камеру, без микрофона.
+            </p>
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => void copyCameraLink()}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-[rgb(var(--border))] px-3 py-2 text-xs font-medium text-[rgb(var(--text-2))] transition hover:bg-[rgb(var(--surface-2))]"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Скопировать ссылку
+              </button>
+              <button
+                type="button"
+                onClick={() => setCameraQrOpen(false)}
+                className="rounded-lg bg-primary-500 px-3 py-2 text-xs font-medium text-white transition hover:bg-primary-600"
+              >
+                Готово
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { Student } from '@/types';
 import { fullName, formatDate } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
+import Link from 'next/link';
 
 function Skeleton({ className }: { className?: string }) {
   return <div className={`skeleton ${className}`} />;
@@ -50,7 +51,7 @@ export default function TeacherStudentsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {students.map((s) => (
-            <Card key={s.id} className="hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
+            <Link key={s.id} href={`/dashboard/teacher/students/${s.id}`}><Card className="h-full hover:shadow-card-hover hover:-translate-y-0.5 transition-all duration-200">
               <CardContent className="pt-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="h-10 w-10 rounded-xl icon-blue flex items-center justify-center text-white text-sm font-bold shrink-0">
@@ -81,7 +82,7 @@ export default function TeacherStudentsPage() {
                   </div>
                 </div>
               </CardContent>
-            </Card>
+            </Card></Link>
           ))}
         </div>
       )}

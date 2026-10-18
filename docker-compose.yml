@@ -2,6 +2,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: tutor_redis
+    restart: unless-stopped
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
@@ -14,12 +15,13 @@ services:
   postgres:
     image: postgres:16-alpine
     container_name: tutor_postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: tutor_platform
     ports:
-      - '5433:5432'
+      - '127.0.0.1:5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -29,26 +31,27 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    image: chainguard/minio:latest-dev
     container_name: tutor_minio
+    restart: unless-stopped
     command: server /data --console-address ':9001'
     environment:
       MINIO_ROOT_USER: tutor
       MINIO_ROOT_PASSWORD: tutor-secret
     ports:
       # Host 9000 is often taken (other stacks / WSL relay) — map to 9010/9011
-      - '9010:9000'
-      - '9011:9001'
+      - '127.0.0.1:9010:9000'
+      - '127.0.0.1:9011:9001'
     volumes:
       - minio_data:/data
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:9000/minio/health/live >/dev/null']
       interval: 5s
       timeout: 5s
       retries: 20
 
   minio-init:
-    image: minio/mc:latest
+    image: chainguard/minio:latest-dev
     container_name: tutor_minio_init
     depends_on:
       minio:
@@ -67,6 +70,7 @@ services:
       dockerfile: Dockerfile
       network: host
     container_name: tutor_backend
+    restart: unless-stopped
     environment:
       DATABASE_HOST: postgres
       DATABASE_PORT: 5432
@@ -86,12 +90,14 @@ services:
       SMTP_PASS: ''
       SMTP_FROM: noreply@tutor-platform.com
       PORT: 3001
-      FRONTEND_URL: http://localhost:3000
-      NODE_ENV: development
+      FRONTEND_URL: ${FRONTEND_URL:-http://${PUBLIC_HOST:-localhost}:${PUBLIC_FRONTEND_PORT:-3004}}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      NODE_ENV: production
+      SMTP_DISABLED: 'true'
       LIVEKIT_API_KEY: devkey
       LIVEKIT_API_SECRET: tutor-dev-livekit-secret-key-32chars
       LIVEKIT_URL: ws://livekit:7890
-      LIVEKIT_PUBLIC_URL: ws://localhost:7890
+      LIVEKIT_PUBLIC_URL: ws://${PUBLIC_HOST:-localhost}:7890
       LESSON_EMPTY_TIMEOUT_SECONDS: 1800
       LESSON_JOIN_EARLY_MINUTES: 30
       LESSON_JOIN_LATE_MINUTES: 120
@@ -103,15 +109,20 @@ services:
       MINIO_BUCKET: tutor-files
       MINIO_REGION: us-east-1
       MINIO_EGRESS_ENDPOINT: http://minio:9000
+      LOCAL_AUDIO_ARCHIVE_DIR: /app/audio
+      COMPUTE_MODE: local
+      COMPUTE_API_URL: ''
+      COMPUTE_SECRET: ''
       TRANSCRIBER_URL: http://transcriber:8000
       TRANSCRIBER_LANGUAGE: ru
       OLLAMA_URL: http://ollama:11434
-      OLLAMA_MODEL: qwen3:8b
-      ENABLE_SEED: 'true'
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
+      ENABLE_SEED: 'false'
     ports:
       - '3001:3001'
     volumes:
       - ./logs:/app/logs
+      - ../website-data/audio:/app/audio
     healthcheck:
       test:
         [
@@ -130,6 +141,10 @@ services:
         condition: service_completed_successfully
       livekit:
         condition: service_started
+      transcriber:
+        condition: service_healthy
+      ollama-pull:
+        condition: service_completed_successfully
 
   frontend:
     build:
@@ -137,14 +152,15 @@ services:
       dockerfile: Dockerfile
       network: host
       args:
-        NEXT_PUBLIC_API_URL: http://localhost:3001
-        NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7890
+        NEXT_PUBLIC_API_URL: http://${PUBLIC_HOST:-localhost}:3001
+        NEXT_PUBLIC_LIVEKIT_URL: ws://${PUBLIC_HOST:-localhost}:7890
     container_name: tutor_frontend
+    restart: unless-stopped
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:3001
-      NEXT_PUBLIC_LIVEKIT_URL: ws://localhost:7890
+      NEXT_PUBLIC_API_URL: http://${PUBLIC_HOST:-localhost}:3001
+      NEXT_PUBLIC_LIVEKIT_URL: ws://${PUBLIC_HOST:-localhost}:7890
     ports:
-      - '3000:3000'
+      - '${PUBLIC_FRONTEND_PORT:-3004}:3000'
     healthcheck:
       test:
         [
@@ -157,12 +173,15 @@ services:
       timeout: 5s
       retries: 15
     depends_on:
-      - backend
-      - livekit
+      backend:
+        condition: service_healthy
+      livekit:
+        condition: service_started
 
   livekit:
     image: livekit/livekit-server:latest
     container_name: tutor_livekit
+    restart: unless-stopped
     ports:
       - '7890:7890'
       - '7891:7891'
@@ -211,9 +230,10 @@ services:
       context: ./services/transcriber
     container_name: tutor_transcriber
     environment:
-      WHISPER_MODEL: large-v3-turbo
-      WHISPER_DEVICE: cpu
-      WHISPER_COMPUTE_TYPE: int8
+      WHISPER_MODEL: ${WHISPER_MODEL:-large-v3-turbo}
+      WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
+      WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      WHISPER_BEAM_SIZE: ${WHISPER_BEAM_SIZE:-1}
       HF_HOME: /models
     expose:
       - '8000'
@@ -235,8 +255,8 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: tutor_ollama
-    ports:
-      - '11434:11434'
+    expose:
+      - '11434'
     volumes:
       - ollama_data:/root/.ollama
     healthcheck:
@@ -251,10 +271,11 @@ services:
     container_name: tutor_ollama_pull
     environment:
       OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3:8b}
     entrypoint: /bin/sh
     command:
       - -c
-      - ollama pull qwen3:8b
+      - ollama pull "$$OLLAMA_MODEL"
     depends_on:
       ollama:
         condition: service_healthy

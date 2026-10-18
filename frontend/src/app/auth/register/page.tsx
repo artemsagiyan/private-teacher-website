@@ -16,6 +16,7 @@ import { apiErrorMessage } from '@/lib/api-error';
 import { useAuthStore } from '@/store/auth.store';
 import { AuthTokens } from '@/types';
 import { cn } from '@/lib/utils';
+import { ColorThemeToggle } from '@/components/theme/color-theme-toggle';
 
 type Tab = 'student' | 'teacher';
 
@@ -74,8 +75,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-5 bg-[rgb(var(--bg))]">
-        <div className="w-full max-w-md animate-fade-in rounded-lg bg-[rgb(var(--surface))] p-6 shadow-card sm:p-8">
+    <div className="relative min-h-screen flex items-center justify-center p-5 bg-[rgb(var(--bg))]">
+      <ColorThemeToggle className="absolute right-5 top-5 z-20 sm:right-8 sm:top-8" />
+        <div className="w-full max-w-md animate-fade-in rounded-3xl border border-[rgb(var(--border-sub))] bg-[rgb(var(--surface)/0.82)] p-6 shadow-[0_22px_65px_rgb(63_17_22/0.1)] backdrop-blur-xl sm:p-8">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-6">
             <img src="/swan.png" alt="" className="h-10 w-10 object-contain" />

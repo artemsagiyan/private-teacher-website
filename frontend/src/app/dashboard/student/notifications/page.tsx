@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bell, CheckCheck, Calendar, BookOpen, Info } from 'lucide-react';
+import { Bell, CheckCheck, Calendar, BookOpen, Info, CircleDollarSign } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Notification } from '@/types';
 import { timeAgo } from '@/lib/utils';
@@ -19,6 +19,10 @@ const typeIcon: Record<string, { icon: any; iconClass: string }> = {
   homework_assigned: { icon: BookOpen, iconClass: 'icon-orange' },
   lesson_failed: { icon: Info, iconClass: 'icon-red' },
   schedule_changed: { icon: Info, iconClass: 'icon-orange' },
+  payment_due: { icon: CircleDollarSign, iconClass: 'icon-orange' },
+  payment_paid: { icon: CircleDollarSign, iconClass: 'icon-green' },
+  homework_due: { icon: BookOpen, iconClass: 'icon-orange' },
+  family_message: { icon: Bell, iconClass: 'icon-violet' },
 };
 
 export default function NotificationsPage() {

@@ -6,6 +6,7 @@ import * as nodemailer from 'nodemailer';
 import { Notification, NotificationType } from './entities/notification.entity';
 import { LessonReport } from '../lessons/entities/lesson.entity';
 import { User } from '../users/entities/user.entity';
+import { Payment } from '../payments/entities/payment.entity';
 
 @Injectable()
 export class NotificationsService {
@@ -137,7 +138,7 @@ export class NotificationsService {
     startTime?: Date,
   ) {
     const when = startTime ? ` (${this.formatDate(startTime)})` : '';
-    const message = `Готов отчёт по уроку${when}`;
+    const message = `Готов черновик разбора урока${when}. Проверьте темы, ошибки и ДЗ перед публикацией`;
     await this.create(
       userId,
       NotificationType.LESSON_REPORT_READY,
@@ -146,9 +147,9 @@ export class NotificationsService {
     );
     await this.sendEmail(
       userId,
-      'Отчёт по уроку готов',
+      'Черновик разбора урока готов',
       message,
-      this.wrapHtml('Отчёт готов', `<p>${message}</p>`),
+      this.wrapHtml('Черновик разбора готов', `<p>${message}</p>`),
     );
   }
 
@@ -159,11 +160,24 @@ export class NotificationsService {
     lessonId: string;
     startTime?: Date;
     report: LessonReport;
+    forecast?: { min: number; expected: number; max: number } | null;
   }) {
     const when = input.startTime ? this.formatDate(input.startTime) : '';
     const link = `${this.configService.get<string>('frontendUrl')}/dashboard/lessons/${input.lessonId}`;
-    const reportHtml = this.reportHtml(input.studentName, when, input.report, link);
-    const reportText = this.reportText(input.studentName, when, input.report, link);
+    const reportHtml = this.reportHtml(
+      input.studentName,
+      when,
+      input.report,
+      link,
+      input.forecast,
+    );
+    const reportText = this.reportText(
+      input.studentName,
+      when,
+      input.report,
+      link,
+      input.forecast,
+    );
 
     if (input.studentUserId) {
       await this.create(
@@ -184,8 +198,8 @@ export class NotificationsService {
       await this.sendEmailDirect(
         input.parentEmail,
         `Отчёт об уроке: ${input.studentName}`,
-        reportText,
-        reportHtml,
+        this.reportText(input.studentName, when, input.report, undefined, input.forecast),
+        this.reportHtml(input.studentName, when, input.report, undefined, input.forecast),
       );
     }
 
@@ -231,8 +245,8 @@ export class NotificationsService {
       await this.sendEmailDirect(
         input.parentEmail,
         `Домашнее задание: ${input.studentName}`,
-        text,
-        html,
+        this.homeworkText(input.studentName, when, homework),
+        this.homeworkHtml(input.studentName, when, homework),
       );
     }
   }
@@ -275,6 +289,97 @@ export class NotificationsService {
       message,
       this.wrapHtml('Напоминание', `<p>${message}</p>`),
     );
+  }
+
+  async notifyPaymentDue(userId: string, payment: Payment) {
+    const message = `Срок оплаты ${payment.description || 'занятия'} — ${Number(payment.amount).toLocaleString('ru-RU')} ₽ до ${this.formatDate(payment.dueAt)}`;
+    await this.create(userId, NotificationType.PAYMENT_DUE, message, payment.id);
+    await this.sendEmail(userId, 'Напоминание об оплате', message, this.wrapHtml('Напоминание об оплате', `<p>${this.escapeHtml(message)}</p>`));
+  }
+
+  async notifyPaymentPaid(userId: string, payment: Payment) {
+    const message = `Оплата отмечена: ${Number(payment.amount).toLocaleString('ru-RU')} ₽ (${payment.description || 'занятие'})`;
+    await this.create(userId, NotificationType.PAYMENT_PAID, message, payment.id);
+    await this.sendEmail(userId, 'Оплата подтверждена', message, this.wrapHtml('Оплата подтверждена', `<p>${this.escapeHtml(message)}</p>`));
+  }
+
+  async notifyHomeworkDue(
+    studentUserId: string,
+    parentEmail: string | null | undefined,
+    studentName: string,
+    assignmentId: string,
+    title: string,
+    dueAt: Date,
+  ) {
+    const due = this.formatDate(dueAt);
+    const message = `Срок домашнего задания «${title}» — ${due}`;
+    const existing = await this.notificationRepository.findOne({
+      where: {
+        userId: studentUserId,
+        type: NotificationType.HOMEWORK_DUE,
+        relatedId: assignmentId,
+      },
+    });
+    if (existing) return;
+    await this.create(
+      studentUserId,
+      NotificationType.HOMEWORK_DUE,
+      message,
+      assignmentId,
+    );
+    const text = `${message}\nОткройте раздел «Домашние задания» в кабинете.`;
+    const html = this.wrapHtml(
+      'Срок домашнего задания',
+      `<p>${this.escapeHtml(message)}</p><p>Откройте раздел «Домашние задания» в кабинете.</p>`,
+    );
+    await this.sendEmail(studentUserId, 'Срок домашнего задания', text, html);
+    if (parentEmail) {
+      await this.sendEmailDirect(
+        parentEmail,
+        `Срок домашнего задания: ${studentName}`,
+        text,
+        html,
+      );
+    }
+  }
+
+  async notifyFamilyMessage(
+    recipientUserId: string,
+    parentEmail: string | null | undefined,
+    senderName: string,
+    relatedId?: string,
+  ) {
+    const message = `Новое сообщение от ${senderName} в чате с семьёй ученика.`;
+    if (relatedId) {
+      const existing = await this.notificationRepository.findOne({
+        where: {
+          userId: recipientUserId,
+          type: NotificationType.FAMILY_MESSAGE,
+          relatedId,
+        },
+      });
+      if (existing) return;
+    }
+    await this.create(
+      recipientUserId,
+      NotificationType.FAMILY_MESSAGE,
+      message,
+      relatedId,
+    );
+    const text = `${message}\nОткройте кабинет, чтобы прочитать и ответить.`;
+    const html = this.wrapHtml(
+      'Новое сообщение',
+      `<p>${this.escapeHtml(message)}</p><p>Откройте кабинет, чтобы прочитать и ответить.</p>`,
+    );
+    await this.sendEmail(recipientUserId, 'Новое сообщение в ТвойМатПлан', text, html);
+    if (parentEmail) {
+      await this.sendEmailDirect(
+        parentEmail,
+        'Новое сообщение в ТвойМатПлан',
+        text,
+        html,
+      );
+    }
   }
 
   async sendWelcomeEmail(email: string, firstName: string) {
@@ -350,7 +455,8 @@ export class NotificationsService {
     studentName: string,
     when: string,
     report: LessonReport,
-    link: string,
+    link?: string,
+    forecast?: { min: number; expected: number; max: number } | null,
   ) {
     const lines = [
       `Отчёт об уроке: ${studentName}${when ? ` (${when})` : ''}`,
@@ -361,8 +467,10 @@ export class NotificationsService {
       this.lines('Сложности', report.difficulties),
       this.lines('Домашнее задание', report.homework),
       this.lines('К следующему уроку', report.recommendations),
-      '',
-      `Открыть в кабинете: ${link}`,
+      forecast
+        ? `\nОриентир по освоению тем: ${forecast.min}–${forecast.max}% (ожидаемо ${forecast.expected}%). Это не официальный балл экзамена.`
+        : '',
+      ...(link ? ['', `Открыть в кабинете: ${link}`] : []),
     ];
     return lines.filter((line) => line !== undefined).join('\n');
   }
@@ -376,7 +484,8 @@ export class NotificationsService {
     studentName: string,
     when: string,
     report: LessonReport,
-    link: string,
+    link?: string,
+    forecast?: { min: number; expected: number; max: number } | null,
   ) {
     const section = (title: string, items: string[]) =>
       items.length
@@ -391,7 +500,8 @@ export class NotificationsService {
        ${section('Сложности', report.difficulties)}
        ${section('Домашнее задание', report.homework)}
        ${section('К следующему уроку', report.recommendations)}
-       <p><a href="${link}">Открыть отчёт на сайте</a></p>`,
+       ${forecast ? `<h3>Ориентир по освоению тем</h3><p>${forecast.min}–${forecast.max}% (ожидаемо ${forecast.expected}%). Это не официальный балл экзамена.</p>` : ''}
+       ${link ? `<p><a href="${link}">Открыть отчёт на сайте</a></p>` : ''}`,
     );
   }
 
@@ -399,14 +509,21 @@ export class NotificationsService {
     studentName: string,
     when: string,
     homework: string[],
-    link: string,
+    link?: string,
   ) {
     return this.wrapHtml(
       `Домашнее задание: ${this.escapeHtml(studentName)}`,
       `<p>${when ? this.escapeHtml(when) : ''}</p>
        <ol>${homework.map((item) => `<li>${this.escapeHtml(item)}</li>`).join('')}</ol>
-       <p><a href="${link}">Открыть урок</a></p>`,
+       ${link ? `<p><a href="${link}">Открыть урок</a></p>` : ''}`,
     );
+  }
+
+  private homeworkText(studentName: string, when: string, homework: string[]) {
+    return [
+      `Домашнее задание для ${studentName}${when ? ` (${when})` : ''}:`,
+      ...homework.map((item, index) => `${index + 1}. ${item}`),
+    ].join('\n');
   }
 
   private escapeHtml(value: string) {

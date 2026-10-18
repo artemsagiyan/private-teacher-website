@@ -18,6 +18,10 @@ export enum NotificationType {
   LESSON_REPORT_READY = 'lesson_report_ready',
   HOMEWORK_ASSIGNED = 'homework_assigned',
   LESSON_FAILED = 'lesson_failed',
+  PAYMENT_DUE = 'payment_due',
+  PAYMENT_PAID = 'payment_paid',
+  HOMEWORK_DUE = 'homework_due',
+  FAMILY_MESSAGE = 'family_message',
 }
 
 @Entity('notifications')

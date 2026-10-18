@@ -12,6 +12,10 @@ import { LessonsController } from './lessons.controller';
 import { LessonsService } from './lessons.service';
 import { PracticeService } from './practice.service';
 import { LivekitLifecycleService } from './livekit-lifecycle.service';
+import { LearningModule } from '../learning/learning.module';
+import { ComputeController } from './compute.controller';
+import { ComputeJob } from './entities/compute-job.entity';
+import { ComputeTokenGuard } from './compute-token.guard';
 
 @Module({
   imports: [
@@ -22,15 +26,18 @@ import { LivekitLifecycleService } from './livekit-lifecycle.service';
       Teacher,
       Student,
       User,
+      ComputeJob,
     ]),
     NotificationsModule,
+    LearningModule,
   ],
-  controllers: [LessonsController],
+  controllers: [LessonsController, ComputeController],
   providers: [
     LessonsService,
     LivekitLifecycleService,
     LessonProcessingService,
     PracticeService,
+    ComputeTokenGuard,
   ],
   exports: [LessonsService, LivekitLifecycleService],
 })

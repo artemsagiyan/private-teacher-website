@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { DashboardSidebar } from './dashboard-sidebar';
 import { api } from '@/lib/api';
 import Link from 'next/link';
+import { ColorThemeToggle } from '@/components/theme/color-theme-toggle';
 
 export function DashboardHeader() {
   const { user, logout } = useAuthStore();
@@ -56,7 +57,7 @@ export function DashboardHeader() {
     <>
       <header
         className={cn(
-          'flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[rgb(var(--border))] bg-[rgb(var(--surface))] px-4 sm:px-6',
+          'dashboard-header glass flex h-16 shrink-0 items-center justify-between gap-3 border-x-0 border-t-0 rounded-none px-4 sm:px-7',
         )}
       >
         <div className="flex min-w-0 items-center gap-2">
@@ -77,6 +78,8 @@ export function DashboardHeader() {
         </div>
 
         <div className="flex items-center gap-1">
+          <ColorThemeToggle className="hidden sm:inline-flex" />
+          <ColorThemeToggle compact className="sm:hidden" />
           <Link
             href={
               user?.role === 'teacher'
@@ -85,7 +88,7 @@ export function DashboardHeader() {
                   ? '/dashboard/admin/notifications'
                   : '/dashboard/student/notifications'
             }
-            className="relative flex h-8 w-8 items-center justify-center rounded-lg text-[rgb(var(--text-2))] hover:bg-[rgb(var(--surface-2))] hover:text-[rgb(var(--text))]"
+            className="relative flex h-9 w-9 items-center justify-center rounded-xl text-[rgb(var(--text-2))] transition-colors hover:bg-[rgb(var(--surface-2))] hover:text-[rgb(var(--text))]"
             aria-label="Уведомления"
           >
             <Bell className="h-4 w-4" />

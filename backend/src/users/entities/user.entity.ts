@@ -57,6 +57,9 @@ export class User {
   @Column({ nullable: true })
   avatarUrl: string;
 
+  @Column({ nullable: true, unique: true, select: false })
+  calendarFeedTokenHash: string | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

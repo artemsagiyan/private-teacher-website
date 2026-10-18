@@ -13,6 +13,8 @@ node_modules/
 !**/.env.local.example
 !deploy/env.prod.example
 deploy/.env.prod
+.tmp-ssh/
+/NUL
 
 # Logs
 logs/

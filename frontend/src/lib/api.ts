@@ -1,6 +1,24 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const CONFIGURED_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+function resolveBaseUrl() {
+  if (typeof window === 'undefined' || process.env.NODE_ENV !== 'production') {
+    return CONFIGURED_BASE_URL;
+  }
+  // The local stack exposes the frontend and API on separate ports. Keep the
+  // public-domain build same-origin, while making direct LAN/IP access work.
+  if (window.location.port === '3004' && window.location.protocol === 'http:') {
+    return `${window.location.protocol}//${window.location.hostname}:3001`;
+  }
+  return '';
+}
+
+// Production serves the API behind the same Nginx host. Using a relative URL
+// keeps the client working when the public domain changes or DNS is still
+// propagating, and avoids sending authenticated requests to a stale hostname.
+const BASE_URL = resolveBaseUrl();
 
 const AUTH_PATHS = [
   '/auth/login',
@@ -169,6 +187,10 @@ class ApiClient {
     link.click();
     link.remove();
     URL.revokeObjectURL(objectUrl);
+  }
+
+  publicUrl(url: string) {
+    return `${BASE_URL}/api${url}`;
   }
 
   // Auth

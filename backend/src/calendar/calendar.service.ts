@@ -16,6 +16,9 @@ import { Teacher } from '../teachers/entities/teacher.entity';
 import { Student } from '../students/entities/student.entity';
 import { Booking, BookingStatus } from '../bookings/entities/booking.entity';
 import { NotificationsService } from '../notifications/notifications.service';
+import { User } from '../users/entities/user.entity';
+import { UserRole } from '../users/enums/user-role.enum';
+import { createHash, randomBytes } from 'crypto';
 import { CreateSlotDto } from './dto/create-slot.dto';
 import { assertValidSlotRange, rangesOverlap } from './slot-overlap';
 
@@ -33,6 +36,8 @@ export class CalendarService {
     private studentRepository: Repository<Student>,
     @InjectRepository(Booking)
     private bookingRepository: Repository<Booking>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
     @InjectDataSource()
     private dataSource: DataSource,
     private notificationsService: NotificationsService,
@@ -274,5 +279,66 @@ export class CalendarService {
       relations: ['teacher', 'teacher.user'],
       order: { startTime: 'ASC' },
     });
+  }
+
+  async exportIcs(user: User) {
+    let slots: CalendarSlot[] = [];
+    if (user.role === UserRole.TEACHER) {
+      slots = await this.getTeacherSlots(user.id);
+    } else if (user.role === UserRole.STUDENT) {
+      const student = await this.studentRepository.findOne({ where: { userId: user.id } });
+      if (student?.teacherId) {
+        slots = await this.slotRepository.find({
+          where: { teacherId: student.teacherId },
+          relations: ['bookings', 'teacher', 'teacher.user'],
+          order: { startTime: 'ASC' },
+        });
+        slots = slots.filter((slot) => slot.bookings?.some((booking) => booking.studentId === student.id && booking.status === BookingStatus.CONFIRMED));
+      }
+    } else {
+      slots = await this.getAllSlots();
+    }
+    const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//ТвойМатПлан//Calendar//RU', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH'];
+    for (const slot of slots) {
+      lines.push('BEGIN:VEVENT');
+      lines.push(`UID:${slot.id}@tvoimatplan`);
+      lines.push(`DTSTAMP:${this.icsDate(new Date())}`);
+      lines.push(`DTSTART:${this.icsDate(new Date(slot.startTime))}`);
+      lines.push(`DTEND:${this.icsDate(new Date(slot.endTime))}`);
+      lines.push(`SUMMARY:${this.icsEscape(slot.note || 'Занятие по математике')}`);
+      lines.push(`DESCRIPTION:${this.icsEscape('ТвойМатПлан')}`);
+      if (slot.status === SlotStatus.CANCELLED) lines.push('STATUS:CANCELLED');
+      lines.push('END:VEVENT');
+    }
+    lines.push('END:VCALENDAR');
+    return lines.join('\r\n');
+  }
+
+  async createFeedLink(userId: string) {
+    const user = await this.userRepository.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('Пользователь не найден');
+    const token = randomBytes(32).toString('base64url');
+    user.calendarFeedTokenHash = createHash('sha256').update(token).digest('hex');
+    await this.userRepository.save(user);
+    return { token };
+  }
+
+  async publicIcs(token: string) {
+    if (!token || token.length < 30) throw new NotFoundException('Календарь не найден');
+    const hash = createHash('sha256').update(token).digest('hex');
+    const user = await this.userRepository.createQueryBuilder('user')
+      .addSelect('user.calendarFeedTokenHash')
+      .where('user.calendarFeedTokenHash = :hash', { hash })
+      .getOne();
+    if (!user || user.isBlocked) throw new NotFoundException('Календарь не найден');
+    return this.exportIcs(user);
+  }
+
+  private icsDate(date: Date) {
+    return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  }
+
+  private icsEscape(value: string) {
+    return value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
   }
 }

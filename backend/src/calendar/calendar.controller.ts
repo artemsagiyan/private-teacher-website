@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Query,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { CalendarService } from './calendar.service';
@@ -18,6 +19,7 @@ import { UserRole } from '../users/enums/user-role.enum';
 import { User } from '../users/entities/user.entity';
 import { CreateSlotDto } from './dto/create-slot.dto';
 import { UpdateSlotDto } from './dto/update-slot.dto';
+import { Response } from 'express';
 
 @Controller('calendar')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -74,5 +76,20 @@ export class CalendarController {
   @Roles(UserRole.ADMIN)
   getAllSlots(@Query('from') from: string, @Query('to') to: string) {
     return this.calendarService.getAllSlots(from, to);
+  }
+
+  @Get('export.ics')
+  @Roles(UserRole.TEACHER, UserRole.STUDENT, UserRole.ADMIN)
+  async export(@CurrentUser() user: User, @Res() response: Response) {
+    const ics = await this.calendarService.exportIcs(user);
+    response.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    response.setHeader('Content-Disposition', 'attachment; filename="tvoimatplan.ics"');
+    response.send(ics);
+  }
+
+  @Post('feed-token')
+  @Roles(UserRole.TEACHER, UserRole.STUDENT)
+  createFeedToken(@CurrentUser() user: User) {
+    return this.calendarService.createFeedLink(user.id);
   }
 }

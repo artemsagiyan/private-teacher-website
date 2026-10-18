@@ -14,6 +14,7 @@ import { api } from '@/lib/api';
 import { apiErrorMessage } from '@/lib/api-error';
 import { useAuthStore } from '@/store/auth.store';
 import { AuthTokens } from '@/types';
+import { ColorThemeToggle } from '@/components/theme/color-theme-toggle';
 
 const schema = z.object({
   email: z.string().email('Введите корректный email'),
@@ -46,10 +47,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-[rgb(var(--bg))]">
+    <div className="relative min-h-screen flex bg-[rgb(var(--bg))]">
+      <ColorThemeToggle className="absolute right-5 top-5 z-20 sm:right-8 sm:top-8" />
       {/* Left decorative panel */}
       <div
-        className="hidden lg:flex lg:w-[420px] xl:w-[480px] relative flex-col justify-between bg-primary-600 p-10 text-white"
+        className="premium-noise relative hidden flex-col justify-between overflow-hidden bg-[#3F1116] p-10 text-white lg:flex lg:w-[420px] xl:w-[480px] xl:p-12"
       >
         <div>
           <Link href="/" className="flex items-center gap-2.5">
@@ -58,7 +60,8 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <div className="space-y-5">
+        <div className="relative space-y-8">
+          <div className="mb-10"><p className="text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-[#9D7960]">ТвойМатПлан</p><h2 className="mt-4 max-w-sm font-serif text-4xl leading-tight tracking-[-0.04em] text-[#FFF1E9]">У каждого занятия есть продолжение.</h2><p className="mt-4 max-w-sm text-sm leading-6 text-[#FEEFDC]/70">Материалы, прогресс и связь с преподавателем — в вашем личном пространстве.</p></div>
           {[
             { title: 'Занятия в удобное время', desc: 'Гибкое расписание без лишних согласований' },
             { title: 'Уведомления автоматически', desc: 'Напоминания о занятии за 24 часа и за 1 час' },
@@ -80,8 +83,9 @@ export default function LoginPage() {
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-sm animate-fade-in">
+      <div className="relative flex flex-1 items-center justify-center p-5 sm:p-8">
+        <div className="pointer-events-none absolute inset-0 hidden items-center justify-center lg:flex"><div className="h-[34rem] w-[34rem] rounded-full border border-[#9D7960]/10" /><div className="absolute h-[27rem] w-[27rem] rounded-full border border-[#9D7960]/10" /></div>
+        <div className="relative w-full max-w-sm animate-fade-in rounded-3xl border border-[rgb(var(--border-sub))] bg-[rgb(var(--surface)/0.72)] p-6 shadow-[0_22px_65px_rgb(63_17_22/0.09)] backdrop-blur-xl sm:p-8">
           <div className="lg:hidden flex justify-center mb-8">
             <Link href="/" className="flex items-center gap-2.5">
               <img src="/swan.png" alt="" className="h-10 w-10 object-contain" />

@@ -6,9 +6,17 @@ import { NotificationsController } from './notifications.controller';
 import { ReminderScheduler } from './reminder.scheduler';
 import { Booking } from '../bookings/entities/booking.entity';
 import { User } from '../users/entities/user.entity';
+import { HomeworkAssignment } from '../learning/entities/learning.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Notification, Booking, User])],
+  imports: [
+    TypeOrmModule.forFeature([
+      Notification,
+      Booking,
+      User,
+      HomeworkAssignment,
+    ]),
+  ],
   providers: [NotificationsService, ReminderScheduler],
   controllers: [NotificationsController],
   exports: [NotificationsService],

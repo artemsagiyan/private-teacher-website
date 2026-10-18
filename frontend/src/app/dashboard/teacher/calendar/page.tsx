@@ -11,6 +11,7 @@ import {
   Repeat,
   Trash2,
   Users,
+  Download,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { CalendarSlot, LessonType } from '@/types';
@@ -34,6 +35,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { WeekCalendar } from '@/components/calendar/week-calendar';
 import { CalendarLegend } from '@/components/calendar/calendar-legend';
 import { CalendarPageHeader } from '@/components/calendar/calendar-page-header';
+import { CalendarFeedControls } from '@/components/calendar/calendar-feed-controls';
 import { SidePanel } from '@/components/calendar/side-panel';
 
 const DAYS_SHORT = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -229,15 +231,14 @@ export default function TeacherCalendarPage() {
         title="Расписание"
         description="Создавайте слоты и управляйте записью учеников"
         actions={
-          <Button
-            size="sm"
-            variant="gradient"
-            onClick={() => openCreate()}
-          >
-            <Plus className="h-4 w-4" /> Новый слот
-          </Button>
+          <>
+            <Button size="sm" variant="outline" onClick={() => api.download('/calendar/export.ics', 'tvoimatplan.ics').catch(() => toast.error('Не удалось экспортировать календарь'))} title="Скачать календарь для импорта в Google или Яндекс"><Download className="h-4 w-4" />Экспорт .ics</Button>
+            <Button size="sm" variant="gradient" onClick={() => openCreate()}><Plus className="h-4 w-4" /> Новый слот</Button>
+          </>
         }
       />
+
+      <CalendarFeedControls />
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2">
@@ -636,9 +637,9 @@ export default function TeacherCalendarPage() {
 
           <CalendarLegend
             items={[
-              { color: '#9D7960', label: 'Свободно' },
-              { color: '#3F1116', label: 'Занято' },
-              { color: '#64343C', label: 'Отменено' },
+              { color: 'rgb(var(--brand-warm))', label: 'Свободно' },
+              { color: 'rgb(var(--brand-deep))', label: 'Занято' },
+              { color: 'rgb(var(--primary-500))', label: 'Отменено' },
             ]}
             showRecurringHint
           />

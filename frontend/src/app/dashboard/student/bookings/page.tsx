@@ -78,7 +78,12 @@ export default function StudentBookingsPage() {
   const upcoming = bookings.filter(
     (b) =>
       b.status === 'confirmed' &&
-      isUpcomingOrLive(b.slot.startTime, b.slot.endTime, now),
+      isUpcomingOrLive(
+        b.slot.startTime,
+        b.slot.endTime,
+        now,
+        b.slot.lesson?.status,
+      ),
   );
   const history = bookings.filter((b) => !upcoming.includes(b));
 

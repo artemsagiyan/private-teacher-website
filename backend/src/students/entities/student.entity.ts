@@ -36,6 +36,12 @@ export class Student {
   @Column({ type: 'varchar', nullable: true })
   parentEmail: string | null;
 
+  @Column({ type: 'varchar', nullable: true, unique: true, select: false })
+  familyAccessTokenHash: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true, select: false })
+  familyAccessTokenExpires: Date | null;
+
   @OneToMany(() => Booking, (booking) => booking.student)
   bookings: Booking[];
 }

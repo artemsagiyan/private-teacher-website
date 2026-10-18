@@ -80,7 +80,11 @@ export type NotificationType =
   | 'teacher_invitation'
   | 'lesson_report_ready'
   | 'homework_assigned'
-  | 'lesson_failed';
+  | 'lesson_failed'
+  | 'payment_due'
+    | 'payment_paid'
+    | 'homework_due'
+    | 'family_message';
 
 export interface Notification {
   id: string;

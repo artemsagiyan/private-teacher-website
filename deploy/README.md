@@ -75,4 +75,12 @@ gunzip -c /var/backups/tutorplatform/STAMP/postgres.sql.gz | \
 
 ## AI models (prod vs local)
 
-Local compose uses `qwen3:8b` and Whisper `large-v3-turbo`. Production defaults are lighter: `qwen2.5:3b` and Whisper `small`. Override via `OLLAMA_MODEL`, `WHISPER_MODEL`, `WHISPER_DEVICE` in `deploy/.env.prod`. For GPU transcription set `WHISPER_DEVICE=cuda` and `WHISPER_COMPUTE_TYPE=float16`.
+Local compose uses `qwen3:8b` and Whisper `large-v3-turbo`. The default production setup sends recordings to the local GPU worker. VPS-side AI services are off by default; enable them with the `server-ai` Compose profile if you intentionally want server-side processing.
+
+### Local GPU worker
+
+Production uses `COMPUTE_MODE=remote`: the VPS stores recordings and places them in a queue, while the local computer runs Whisper and Ollama and sends the finished report back. Copy `services/compute-bot/.env.example` to `services/compute-bot/.env`, set `SITE_URL` to the public site, and copy the same `COMPUTE_SECRET` from the server's `deploy/.env.prod`. Start the CUDA stack from the repository root with `docker compose -f services/compute-bot/docker-compose.gpu.yml up -d --build`.
+
+The CUDA stack keeps model caches on the local computer. It requires Docker GPU support for NVIDIA; the server keeps only the queue and does not perform the heavy transcription or report generation. If Docker GPU support is unavailable, run the bot directly with `node services/compute-bot/bot.mjs` while Ollama and the CUDA transcriber are already listening on `127.0.0.1`.
+
+Downloaded lesson audio is retained on the local computer at `D:\job\website-data\audio` (mounted in the worker at `/data/audio`) after processing, so it can be transcribed without downloading again on retries. The archive is not automatically pruned; monitor free disk space and remove recordings manually when they are no longer needed.

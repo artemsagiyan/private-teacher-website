@@ -1,15 +1,8 @@
 import type { Metadata } from 'next';
-import { Roboto } from 'next/font/google';
 import { Toaster } from 'sonner';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { ColorThemeProvider } from '@/components/providers/color-theme-provider';
 import './globals.css';
-
-const sans = Roboto({
-  subsets: ['latin', 'cyrillic'],
-  weight: ['400', '500', '700'],
-  variable: '--font-sans',
-  display: 'swap',
-});
 
 export const metadata: Metadata = {
   title: 'ТвойМатПлан — онлайн-занятия с репетитором',
@@ -19,19 +12,28 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ru" suppressHydrationWarning>
-      <body className={`${sans.variable} font-sans antialiased`}>
-        <ThemeProvider attribute="class" forcedTheme="light" defaultTheme="light" enableSystem={false}>
-          {children}
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              style: {
-                background: '#FFF1E9',
-                color: '#64343C',
-                border: '1px solid #9D7960',
-              },
-            }}
-          />
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => { document.documentElement.dataset.colorTheme = 'cranberry'; try { localStorage.setItem('tvoimatplan-color-theme', 'cranberry'); } catch (_) {} })();`,
+          }}
+        />
+      </head>
+      <body className="font-sans antialiased">
+        <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+          <ColorThemeProvider>
+            {children}
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                style: {
+                  background: 'rgb(var(--surface))',
+                  color: 'rgb(var(--text))',
+                  border: '1px solid rgb(var(--border))',
+                },
+              }}
+            />
+          </ColorThemeProvider>
         </ThemeProvider>
       </body>
     </html>

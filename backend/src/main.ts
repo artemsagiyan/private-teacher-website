@@ -73,8 +73,20 @@ async function bootstrap() {
     }),
   );
 
+  const allowedOrigins = (
+    process.env.CORS_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:3000'
+  )
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(null, false);
+    },
     credentials: true,
   });
 

@@ -10,7 +10,7 @@ export function Wordmark({
   return (
     <span
       className={cn(
-        'font-medium tracking-tight',
+        'font-semibold tracking-[-0.04em]',
         light ? 'text-[#FFF1E9]' : 'text-[#64343C]',
         className,
       )}

@@ -78,6 +78,16 @@ export class LessonsController {
     return this.lessons.sendHomework(user, id, homework);
   }
 
+  @Post(':id/realtime-transcript')
+  @UseGuards(JwtAuthGuard)
+  realtimeTranscript(
+    @CurrentUser() user: User,
+    @Param('id') id: string,
+    @Body() body: { audioBase64?: string },
+  ) {
+    return this.lessons.realtimeTranscript(user, id, body?.audioBase64 || '');
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   get(@CurrentUser() user: User, @Param('id') id: string) {

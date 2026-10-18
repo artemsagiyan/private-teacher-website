@@ -5,19 +5,20 @@ import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Wordmark } from '@/components/layout/wordmark';
+import { ColorThemeToggle } from '@/components/theme/color-theme-toggle';
 
 export function PublicHeader() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[#9D7960] bg-[#FEEFDC]">
-      <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-5">
+    <header className="sticky top-0 z-50 border-b border-[rgb(var(--border)/0.65)] bg-[#FEEFDC]/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-[76px] max-w-7xl items-center justify-between px-5 lg:px-8">
         <Link href="/" className="flex items-center gap-2.5">
-          <img src="/swan.png" alt="" className="h-10 w-10 object-contain" />
-          <Wordmark className="text-lg" />
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#3F1116] shadow-[0_8px_18px_rgb(63_17_22/0.22)]"><img src="/swan.png" alt="" className="h-8 w-8 object-contain" /></span>
+          <Wordmark className="text-[1.05rem]" />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm text-[rgb(var(--text-2))]">
+        <nav className="hidden items-center gap-8 text-[0.78rem] font-semibold uppercase tracking-[0.12em] text-[rgb(var(--text-3))] md:flex">
           <Link href="/#how" className="hover:text-[rgb(var(--text))] transition-colors">
             Как это работает
           </Link>
@@ -30,6 +31,8 @@ export function PublicHeader() {
         </nav>
 
         <div className="flex items-center gap-2">
+          <ColorThemeToggle className="hidden sm:inline-flex" />
+          <ColorThemeToggle compact className="sm:hidden" />
           <button
             type="button"
             className="md:hidden h-8 w-8 rounded-lg flex items-center justify-center text-[rgb(var(--text-2))]"
@@ -39,12 +42,12 @@ export function PublicHeader() {
             <Menu className="h-5 w-5" />
           </button>
           <Link href="/auth/login" className="hidden sm:block">
-            <Button variant="outline" size="sm">
+            <Button variant="ghost" size="sm">
               Войти
             </Button>
           </Link>
           <Link href="/auth/register" className="hidden sm:block">
-            <Button size="sm">Записаться</Button>
+            <Button variant="gradient" size="sm">Записаться</Button>
           </Link>
         </div>
       </div>

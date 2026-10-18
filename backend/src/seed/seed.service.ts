@@ -8,6 +8,9 @@ import { UserRole } from '../users/enums/user-role.enum';
 import { Teacher } from '../teachers/entities/teacher.entity';
 import { Student } from '../students/entities/student.entity';
 import { RegistrationCode } from '../admin/entities/registration-code.entity';
+import { CurriculumService } from '../curriculum/curriculum.service';
+import { ExamTrack } from '../curriculum/entities/curriculum.entity';
+import { StudentLearningProfile } from '../learning/entities/learning.entity';
 
 @Injectable()
 export class SeedService implements OnModuleInit {
@@ -19,6 +22,9 @@ export class SeedService implements OnModuleInit {
     @InjectRepository(Student) private studentRepo: Repository<Student>,
     @InjectRepository(RegistrationCode)
     private codeRepo: Repository<RegistrationCode>,
+    @InjectRepository(StudentLearningProfile)
+    private learningProfileRepo: Repository<StudentLearningProfile>,
+    private curriculum: CurriculumService,
     private config: ConfigService,
   ) {}
 
@@ -29,6 +35,8 @@ export class SeedService implements OnModuleInit {
     await this.seedTeacher();
     await this.seedStudent();
     await this.seedTeacherCode();
+    await this.seedCurriculum();
+    await this.seedLearningProfile();
   }
 
   private async bootstrapProdAdmin() {
@@ -135,5 +143,37 @@ export class SeedService implements OnModuleInit {
     });
     await this.codeRepo.save(code);
     this.logger.log('Dev teacher registration code: NEWTEACHER');
+  }
+
+  private async seedCurriculum() {
+    await this.curriculum.importDemo(true);
+    this.logger.log('Demo curricula imported for all math exam tracks');
+  }
+
+  private async seedLearningProfile() {
+    const user = await this.userRepo.findOne({
+      where: { email: 'student@tutor.local' },
+    });
+    if (!user) return;
+    const student = await this.studentRepo.findOne({
+      where: { userId: user.id },
+    });
+    if (!student) return;
+    const exists = await this.learningProfileRepo.findOne({
+      where: { studentId: student.id },
+    });
+    if (exists) return;
+    const release = await this.curriculum.getActiveRelease(
+      ExamTrack.EGE_PROFILE,
+    );
+    await this.learningProfileRepo.save(
+      this.learningProfileRepo.create({
+        studentId: student.id,
+        examTrack: ExamTrack.EGE_PROFILE,
+        curriculumReleaseId: release.id,
+        targetScore: 80,
+      }),
+    );
+    this.logger.log('Demo learning profile created for student@tutor.local');
   }
 }

@@ -1,0 +1,27 @@
+services:
+  compute-bot:
+    build: .
+    container_name: tutor_compute_bot_local
+    env_file:
+      - .env
+    environment:
+      # Reuse the local Whisper/Ollama services from the main stack.
+      OLLAMA_URL: http://tutor_ollama:11434
+      TRANSCRIBER_URL: http://tutor_transcriber:8000
+      TRANSCRIBER_FETCH_HOST: compute-bot.local
+      TRANSCRIBER_FETCH_BIND: 0.0.0.0
+      OLLAMA_NUM_CTX: ${OLLAMA_NUM_CTX:-16384}
+      LOCAL_AUDIO_DIR: /data/audio
+    volumes:
+      # Persistent local archive on D:\job\website-data\audio.
+      - ../../../website-data/audio:/data/audio
+    networks:
+      default:
+        aliases:
+          - compute-bot.local
+    restart: unless-stopped
+
+networks:
+  default:
+    external: true
+    name: website_default

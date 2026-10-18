@@ -1,5 +1,7 @@
-/** Shared lesson/booking window rules — keep in sync with backend livekit config. */
+/** Shared lesson/booking rules. */
 
+// Kept as exported compatibility constants for callers that display the old
+// booking window. Joining a lesson itself is no longer limited by this window.
 export const LESSON_JOIN_EARLY_MS = 30 * 60_000;
 export const LESSON_JOIN_LATE_MS = 120 * 60_000;
 export const BOOKING_CANCEL_MIN_HOURS = 24;
@@ -12,28 +14,25 @@ export const CAL_HOURS_END = 24;
 
 export type LessonViewMode = 'video' | 'split' | 'board';
 
-const LIVE_LESSON_STATUSES = new Set(['starting', 'active']);
+const JOINABLE_LESSON_STATUSES = new Set(['waiting', 'starting', 'active']);
 
 export function canJoinLesson(
-  startTime: string | Date,
-  endTime: string | Date,
-  now = Date.now(),
+  _startTime: string | Date,
+  _endTime: string | Date,
+  _now?: number,
   lessonStatus?: string | null,
 ) {
-  if (lessonStatus && LIVE_LESSON_STATUSES.has(lessonStatus)) return true;
-  const start = new Date(startTime).getTime();
-  const end = new Date(endTime).getTime();
-  return now >= start - LESSON_JOIN_EARLY_MS && now <= end + LESSON_JOIN_LATE_MS;
+  return !lessonStatus || JOINABLE_LESSON_STATUSES.has(lessonStatus);
 }
 
-/** Confirmed lesson is still relevant: not ended, or still inside the late join window. */
+/** A confirmed slot remains visible until its lesson reaches a terminal status. */
 export function isUpcomingOrLive(
-  startTime: string | Date,
-  endTime: string | Date,
-  now = Date.now(),
+  _startTime: string | Date,
+  _endTime: string | Date,
+  _now?: number,
+  lessonStatus?: string | null,
 ) {
-  void startTime;
-  return now <= new Date(endTime).getTime() + LESSON_JOIN_LATE_MS;
+  return !lessonStatus || JOINABLE_LESSON_STATUSES.has(lessonStatus);
 }
 
 export function parseLessonViewMode(

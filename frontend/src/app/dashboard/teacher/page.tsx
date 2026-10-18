@@ -39,7 +39,12 @@ export default function TeacherDashboard() {
     .filter(
       (b) =>
         b.status === 'confirmed' &&
-        isUpcomingOrLive(b.slot.startTime, b.slot.endTime, now),
+        isUpcomingOrLive(
+          b.slot.startTime,
+          b.slot.endTime,
+          now,
+          b.slot.lesson?.status,
+        ),
     )
     .sort(
       (a, b) =>

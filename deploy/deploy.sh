@@ -150,11 +150,29 @@ SMTP_FROM=noreply@${DOMAIN}
 WHISPER_MODEL=small
 WHISPER_DEVICE=cpu
 OLLAMA_MODEL=qwen2.5:3b
+COMPUTE_MODE=remote
+COMPUTE_SECRET=$(rand_hex 24)
 ENABLE_SEED=false
 SMTP_DISABLED=false
 ADMIN_EMAIL=
 ADMIN_PASSWORD=
 EOF
+  chmod 600 "$ENV_FILE"
+}
+
+ensure_compute_env() {
+  local current
+  if ! grep -q '^COMPUTE_MODE=' "$ENV_FILE"; then
+    printf 'COMPUTE_MODE=remote\n' >> "$ENV_FILE"
+  fi
+  current="$(grep '^COMPUTE_SECRET=' "$ENV_FILE" | cut -d= -f2- || true)"
+  if [[ -z "$current" ]]; then
+    if grep -q '^COMPUTE_SECRET=' "$ENV_FILE"; then
+      sed -i "s|^COMPUTE_SECRET=.*|COMPUTE_SECRET=$(rand_hex 24)|" "$ENV_FILE"
+    else
+      printf 'COMPUTE_SECRET=%s\n' "$(rand_hex 24)" >> "$ENV_FILE"
+    fi
+  fi
   chmod 600 "$ENV_FILE"
 }
 
@@ -395,6 +413,7 @@ main() {
   check_dns
   free_port_3000
   write_env
+  ensure_compute_env
   write_livekit_configs
   backup_nginx
   compose_up

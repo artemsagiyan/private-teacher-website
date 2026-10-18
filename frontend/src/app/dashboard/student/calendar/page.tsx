@@ -10,6 +10,7 @@ import {
   FileText,
   Repeat,
   Users,
+  Download,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { CalendarSlot, Booking } from '@/types';
@@ -29,6 +30,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { WeekCalendar } from '@/components/calendar/week-calendar';
 import { CalendarLegend } from '@/components/calendar/calendar-legend';
 import { CalendarPageHeader } from '@/components/calendar/calendar-page-header';
+import { CalendarFeedControls } from '@/components/calendar/calendar-feed-controls';
 import { SidePanel } from '@/components/calendar/side-panel';
 
 type Mode = 'my' | 'book';
@@ -93,9 +95,9 @@ export default function StudentCalendarPage() {
         b.slot.lessonType === 'individual' ? 'Моё занятие' : 'Групповое',
       start: b.slot.startTime,
       end: b.slot.endTime,
-      backgroundColor: '#3F1116',
+      backgroundColor: 'rgb(var(--brand-deep))',
       borderColor: 'transparent',
-      textColor: '#FFF1E9',
+      textColor: 'rgb(var(--primary-fg))',
       classNames: ['my-booking-event'],
       extendedProps: { type: 'booking' as const, booking: b },
     }));
@@ -112,9 +114,9 @@ export default function StudentCalendarPage() {
           .join(' '),
         start: s.startTime,
         end: s.endTime,
-        backgroundColor: '#9D7960',
+        backgroundColor: 'rgb(var(--brand-warm))',
         borderColor: 'transparent',
-        textColor: '#3F1116',
+        textColor: 'rgb(var(--brand-deep))',
         extendedProps: { type: 'slot' as const, slot: s },
       }));
 
@@ -122,8 +124,8 @@ export default function StudentCalendarPage() {
     return [
       ...myEvents.map((e) => ({
         ...e,
-        backgroundColor: '#9D7960',
-        textColor: '#3F1116',
+        backgroundColor: 'rgb(var(--brand-warm))',
+        textColor: 'rgb(var(--brand-deep))',
         classNames: ['my-booking-dim'],
       })),
       ...freeEvents,
@@ -133,7 +135,7 @@ export default function StudentCalendarPage() {
   return (
     <div className="space-y-4">
       <style>{`
-        .my-booking-event { box-shadow: 0 0 12px rgb(63 17 22 / 0.35) !important; }
+        .my-booking-event { box-shadow: 0 0 12px rgb(var(--brand-deep) / 0.35) !important; }
         .my-booking-dim { opacity: 0.55 !important; }
       `}</style>
 
@@ -145,28 +147,25 @@ export default function StudentCalendarPage() {
             : 'Выберите свободный слот преподавателя'
         }
         actions={
-          <Segmented
-            value={mode}
-            onChange={(v) => {
-              setMode(v);
-              setSelected(null);
-              setSelectedBooking(null);
-            }}
-            options={[
-              {
-                value: 'my',
-                label: 'Моё',
-                icon: <CalendarDays className="h-3.5 w-3.5" />,
-              },
-              {
-                value: 'book',
-                label: 'Записаться',
-                icon: <BookOpen className="h-3.5 w-3.5" />,
-              },
-            ]}
-          />
+          <>
+            <Segmented
+              value={mode}
+              onChange={(v) => {
+                setMode(v);
+                setSelected(null);
+                setSelectedBooking(null);
+              }}
+              options={[
+                { value: 'my', label: 'Моё', icon: <CalendarDays className="h-3.5 w-3.5" /> },
+                { value: 'book', label: 'Записаться', icon: <BookOpen className="h-3.5 w-3.5" /> },
+              ]}
+            />
+            <Button size="sm" variant="outline" onClick={() => api.download('/calendar/export.ics', 'tvoimatplan.ics').catch(() => toast.error('Не удалось экспортировать календарь'))} title="Скачать календарь для импорта в Google или Яндекс"><Download className="h-4 w-4" />Экспорт .ics</Button>
+          </>
         }
       />
+
+      <CalendarFeedControls />
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2">
@@ -193,9 +192,9 @@ export default function StudentCalendarPage() {
         <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
           <CalendarLegend
             items={[
-              { color: '#3F1116', label: 'Моё занятие', glow: true },
+              { color: 'rgb(var(--brand-deep))', label: 'Моё занятие', glow: true },
               ...(mode === 'book'
-                ? [{ color: '#9D7960', label: 'Свободный слот' }]
+                ? [{ color: 'rgb(var(--brand-warm))', label: 'Свободный слот' }]
                 : []),
             ]}
             showRecurringHint={mode === 'book'}

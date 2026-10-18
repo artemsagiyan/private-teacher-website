@@ -1,8 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, IsNull, Repository } from 'typeorm';
 import { Booking, BookingStatus } from '../bookings/entities/booking.entity';
+import { HomeworkAssignment, HomeworkStatus } from '../learning/entities/learning.entity';
 import { NotificationsService } from './notifications.service';
 
 @Injectable()
@@ -12,6 +13,8 @@ export class ReminderScheduler {
   constructor(
     @InjectRepository(Booking)
     private bookingRepo: Repository<Booking>,
+    @InjectRepository(HomeworkAssignment)
+    private homeworkRepo: Repository<HomeworkAssignment>,
     private notifications: NotificationsService,
   ) {}
 
@@ -51,6 +54,58 @@ export class ReminderScheduler {
       ) {
         await this.claimAndSend(booking.id, 'reminder1hSent', () =>
           this.notifications.sendReminder1h(userId, start),
+        );
+      }
+    }
+
+    await this.sendHomeworkReminders(now);
+  }
+
+  private async sendHomeworkReminders(now: number) {
+    const windowStart = new Date(now + 23 * 3600_000);
+    const windowEnd = new Date(now + 25 * 3600_000);
+    const assignments = await this.homeworkRepo.find({
+      where: {
+        status: HomeworkStatus.PUBLISHED,
+        dueAt: Between(windowStart, windowEnd),
+        dueReminderSentAt: IsNull(),
+      },
+      relations: ['student', 'student.user', 'lesson', 'lesson.slot'],
+      take: 500,
+    });
+    for (const assignment of assignments) {
+      const dueAt = assignment.dueAt;
+      const student = assignment.student;
+      if (!dueAt || !student?.userId) continue;
+      const reminderClaimedAt = new Date();
+      const claimed = await this.homeworkRepo.update(
+        {
+          id: assignment.id,
+          status: HomeworkStatus.PUBLISHED,
+          dueReminderSentAt: IsNull(),
+        },
+        { dueReminderSentAt: reminderClaimedAt },
+      );
+      if (!claimed.affected) continue;
+      const title = assignment.lesson?.slot?.note || 'Домашнее задание';
+      try {
+        await this.notifications.notifyHomeworkDue(
+          student.userId,
+          student.parentEmail,
+          `${student.user?.firstName ?? ''} ${student.user?.lastName ?? ''}`.trim() || 'ученик',
+          assignment.id,
+          title,
+          dueAt,
+        );
+      } catch (error) {
+        await this.homeworkRepo.update(
+          { id: assignment.id, dueReminderSentAt: reminderClaimedAt },
+          { dueReminderSentAt: null },
+        );
+        this.logger.warn(
+          `Homework deadline reminder failed for ${assignment.id}: ${
+            error instanceof Error ? error.message : error
+          }`,
         );
       }
     }

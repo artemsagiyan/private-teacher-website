@@ -7,14 +7,16 @@ import { Booking } from '../bookings/entities/booking.entity';
 import { CalendarService } from './calendar.service';
 import { CalendarController } from './calendar.controller';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { User } from '../users/entities/user.entity';
+import { CalendarFeedController } from './calendar-feed.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([CalendarSlot, Teacher, Student, Booking]),
+    TypeOrmModule.forFeature([CalendarSlot, Teacher, Student, Booking, User]),
     NotificationsModule,
   ],
   providers: [CalendarService],
-  controllers: [CalendarController],
+  controllers: [CalendarController, CalendarFeedController],
   exports: [CalendarService],
 })
 export class CalendarModule {}

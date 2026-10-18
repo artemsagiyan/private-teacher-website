@@ -4,8 +4,10 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
   In,
+  IsNull,
   LessThanOrEqual,
   MoreThanOrEqual,
+  Not,
   Repository,
 } from 'typeorm';
 import {
@@ -78,6 +80,33 @@ export class LivekitLifecycleService {
 
     switch (event.event) {
       case 'participant_joined':
+        if (roomName && event.participant?.identity) {
+          const identity = event.participant.identity;
+          const isUserIdentity = !identity.startsWith('camera-');
+          // LiveKit can emit service/device identities that are not UUIDs.
+          // Never let one malformed identity abort the webhook before the
+          // participant count and recording state are reconciled.
+          const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identity);
+          if (isUserIdentity && isUuid && (await this.userRepo.exists({ where: { id: identity } }))) {
+            const lesson = await this.lessons.findByRoomName(roomName);
+            if (
+              lesson &&
+              [
+                LessonStatus.WAITING,
+                LessonStatus.STARTING,
+                LessonStatus.ACTIVE,
+              ].includes(lesson.status)
+            ) {
+              await this.lessonRepo.update(
+                { id: lesson.id, status: lesson.status },
+                { startedAt: lesson.startedAt || new Date() },
+              );
+            }
+          }
+          await this.refreshParticipantCount(roomName);
+        }
+        break;
+
       case 'participant_left':
       case 'participant_connection_aborted':
         if (roomName) await this.refreshParticipantCount(roomName);
@@ -126,6 +155,7 @@ export class LivekitLifecycleService {
     const abandoned = await this.lessonRepo.find({
       where: {
         status: In([
+          LessonStatus.WAITING,
           LessonStatus.STARTING,
           LessonStatus.ACTIVE,
           LessonStatus.ENDING,
@@ -156,7 +186,7 @@ export class LivekitLifecycleService {
     const waitingWithParticipants = await this.lessonRepo.find({
       where: {
         status: LessonStatus.WAITING,
-        participantCount: MoreThanOrEqual(2),
+        participantCount: MoreThanOrEqual(1),
       },
       take: 10,
     });
@@ -169,19 +199,24 @@ export class LivekitLifecycleService {
       take: 10,
     });
     for (const lesson of endingRecordings) {
-      // STARTING→ENDING without egressId: complete after short grace
+      // STARTING→ENDING without egressId: process after short grace.
       if (
         !lesson.egressId &&
         lesson.endedAt &&
         lesson.endedAt.getTime() < Date.now() - 90_000
       ) {
+        const hadVisit = Boolean(
+          lesson.startedAt || lesson.participantCount > 0,
+        );
         await this.lessonRepo.update(
           { id: lesson.id, status: LessonStatus.ENDING },
           {
-            status: LessonStatus.COMPLETED,
-            processingError:
-              lesson.processingError ||
-              'Урок завершён без аудиозаписи',
+            status: hadVisit ? LessonStatus.PROCESSING : LessonStatus.COMPLETED,
+            nextProcessingAt: hadVisit ? new Date(Date.now() + 5_000) : null,
+            recordingObjectKey: hadVisit ? null : lesson.recordingObjectKey,
+            processingError: hadVisit
+              ? null
+              : lesson.processingError || 'Урок завершён без аудиозаписи',
           },
         );
         await this.lessons.markBookingsCompleted(lesson.slotId);
@@ -216,6 +251,45 @@ export class LivekitLifecycleService {
       } catch (error) {
         this.logger.warn(
           `Could not reconcile ending egress ${lesson.egressId}: ${
+            error instanceof Error ? error.message : error
+          }`,
+        );
+      }
+    }
+
+    // A webhook can be dropped while LiveKit is restarting. Reconcile active
+    // egresses as well, so a finished recording still reaches PROCESSING.
+    const activeRecordings = await this.lessonRepo.find({
+      where: {
+        status: In([LessonStatus.ACTIVE, LessonStatus.STARTING]),
+        egressId: Not(IsNull()),
+      },
+      take: 20,
+    });
+    for (const lesson of activeRecordings) {
+      try {
+        const [info] = await this.egressClient.listEgress({
+          egressId: lesson.egressId,
+        });
+        if (
+          info &&
+          [
+            EgressStatus.EGRESS_COMPLETE,
+            EgressStatus.EGRESS_FAILED,
+            EgressStatus.EGRESS_ABORTED,
+            EgressStatus.EGRESS_LIMIT_REACHED,
+          ].includes(info.status)
+        ) {
+          await this.handleEgressEnded(
+            info.egressId,
+            info.status,
+            info.error,
+            info.roomName,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Could not reconcile active egress ${lesson.egressId}: ${
             error instanceof Error ? error.message : error
           }`,
         );
@@ -257,9 +331,34 @@ export class LivekitLifecycleService {
       return false;
     }
 
-    const participantCount = identities.length
-      ? await this.userRepo.count({ where: { id: In(identities) } })
-      : 0;
+    // Camera-only participants use an opaque `camera-...` identity and are
+    // intentionally excluded from lesson attendance and recording lifecycle.
+    // Passing those identities to Postgres UUID comparisons makes the webhook
+    // fail and can prevent egress cleanup/processing.
+    const userIdentities = identities.filter(
+      (identity) => identity && !identity.startsWith('camera-'),
+    );
+    // Some installations use non-UUID user identities. Count only identities
+    // that are confirmed users; a failed lookup must not make the webhook
+    // transaction fail.
+    let participantCount = 0;
+    if (typeof (this.userRepo as any).exists === 'function') {
+      for (const identity of userIdentities) {
+        try {
+          if (await this.userRepo.exists({ where: { id: identity } })) {
+            participantCount += 1;
+          }
+        } catch {
+          // Ignore malformed/legacy identities and keep processing the room.
+        }
+      }
+    } else if (userIdentities.length) {
+      // Lightweight test doubles and older repository adapters expose count
+      // only; keep that compatibility path for them.
+      participantCount = await this.userRepo.count({
+        where: { id: In(userIdentities) },
+      });
+    }
 
     const update: Partial<Lesson> = { participantCount };
     if (participantCount === 0) {
@@ -267,23 +366,15 @@ export class LivekitLifecycleService {
         lesson.lastParticipantLeftAt || new Date();
     } else {
       update.lastParticipantLeftAt = null;
+      update.startedAt = lesson.startedAt || new Date();
     }
     await this.lessonRepo.update(lesson.id, update);
 
-    const teacherUserId = lesson.teacher?.userId;
-    const teacherPresent = Boolean(
-      teacherUserId && identities.includes(teacherUserId),
-    );
-    const studentPresent = identities.some(
-      (identity) => identity !== teacherUserId,
-    );
-
-    if (
-      teacherPresent &&
-      studentPresent &&
-      lesson.status === LessonStatus.WAITING
-    ) {
-      await this.startRecording(lesson);
+    if (participantCount > 0 && lesson.status === LessonStatus.WAITING) {
+      await this.startRecording({
+        ...lesson,
+        startedAt: lesson.startedAt || update.startedAt,
+      });
     }
     return true;
   }
@@ -326,7 +417,7 @@ export class LivekitLifecycleService {
       { id: lesson.id, status: LessonStatus.WAITING },
       {
         status: LessonStatus.STARTING,
-        startedAt: new Date(),
+        startedAt: lesson.startedAt || new Date(),
         recordingObjectKey,
         processingError: null,
       },
@@ -370,6 +461,9 @@ export class LivekitLifecycleService {
       if (!activated.affected) {
         // Teacher (or empty-room) ended while egress was starting.
         const current = await this.lessonRepo.findOneBy({ id: lesson.id });
+        const hadVisit = Boolean(
+          current?.startedAt || current?.participantCount,
+        );
         try {
           const stopped = await this.egressClient.stopEgress(info.egressId);
           if (
@@ -395,10 +489,17 @@ export class LivekitLifecycleService {
             await this.lessonRepo.update(
               { id: lesson.id, status: LessonStatus.ENDING },
               {
-                status: LessonStatus.COMPLETED,
+                status: hadVisit
+                  ? LessonStatus.PROCESSING
+                  : LessonStatus.COMPLETED,
+                nextProcessingAt: hadVisit
+                  ? new Date(Date.now() + 5_000)
+                  : null,
+                recordingObjectKey: null,
                 egressId: null,
-                processingError:
-                  'Урок завершён до готовности записи',
+                processingError: hadVisit
+                  ? null
+                  : 'Урок завершён до готовности записи',
               },
             );
           }
@@ -422,17 +523,27 @@ export class LivekitLifecycleService {
         { id: lesson.id, status: LessonStatus.STARTING },
         {
           status: LessonStatus.WAITING,
-          startedAt: null,
+          recordingObjectKey: null,
+          startedAt: lesson.startedAt || new Date(),
           processingError: `Не удалось запустить запись: ${message}`,
         },
       );
       if (!rolledBack.affected) {
         // Already moved to ENDING — finish without recording
+        const hadVisit = Boolean(
+          lesson.startedAt || lesson.participantCount > 0,
+        );
         const done = await this.lessonRepo.update(
           { id: lesson.id, status: LessonStatus.ENDING },
           {
-            status: LessonStatus.COMPLETED,
-            processingError: `Не удалось запустить запись: ${message}`,
+            status: hadVisit
+              ? LessonStatus.PROCESSING
+              : LessonStatus.COMPLETED,
+            nextProcessingAt: hadVisit ? new Date(Date.now() + 5_000) : null,
+            recordingObjectKey: hadVisit ? null : lesson.recordingObjectKey,
+            processingError: hadVisit
+              ? null
+              : `Не удалось запустить запись: ${message}`,
           },
         );
         if (done.affected) {
@@ -488,6 +599,9 @@ export class LivekitLifecycleService {
             },
           );
         } else {
+          const hadVisit = Boolean(
+            fresh.startedAt || fresh.participantCount > 0,
+          );
           const completed = await this.lessonRepo.update(
             {
               id: fresh.id,
@@ -498,10 +612,14 @@ export class LivekitLifecycleService {
               ]),
             },
             {
-              status: LessonStatus.COMPLETED,
+              status: hadVisit ? LessonStatus.PROCESSING : LessonStatus.COMPLETED,
               endedAt: new Date(),
               endReason: reason,
               participantCount: 0,
+              recordingObjectKey: hadVisit ? null : fresh.recordingObjectKey,
+              nextProcessingAt: hadVisit
+                ? new Date(Date.now() + 5_000)
+                : null,
             },
           );
           if (!completed.affected) return;
@@ -638,7 +756,7 @@ export class LivekitLifecycleService {
             status: LessonStatus.WAITING,
             egressId: null,
             recordingObjectKey: null,
-            startedAt: null,
+            startedAt: lesson.startedAt || new Date(),
             processingError:
               error ||
               'Запись прервалась; урок продолжается без записи',
@@ -648,19 +766,27 @@ export class LivekitLifecycleService {
       }
 
       // Lesson was already ending — mark failed and clean up
+      const hadVisit = Boolean(
+        lesson.startedAt || lesson.participantCount > 0,
+      );
       const failed = await this.lessonRepo.update(
         {
           id: lesson.id,
           status: In([LessonStatus.ENDING]),
         },
         {
-          status: LessonStatus.FAILED,
+          status: hadVisit ? LessonStatus.PROCESSING : LessonStatus.FAILED,
           endedAt: lesson.endedAt || new Date(),
           endReason: lesson.endReason || LessonEndReason.SYSTEM,
           participantCount: 0,
           processingLeaseId: null,
-          processingError:
-            error || 'Запись урока завершилась с ошибкой',
+          recordingObjectKey: hadVisit ? null : lesson.recordingObjectKey,
+          nextProcessingAt: hadVisit
+            ? new Date(Date.now() + 5_000)
+            : null,
+          processingError: hadVisit
+            ? null
+            : error || 'Запись урока завершилась с ошибкой',
         },
       );
       if (failed.affected) {

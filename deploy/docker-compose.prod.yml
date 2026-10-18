@@ -55,6 +55,7 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       COMPUTE_API_URL: ${COMPUTE_API_URL:-}
       COMPUTE_SECRET: ${COMPUTE_SECRET:-}
+      COMPUTE_MODE: ${COMPUTE_MODE:-remote}
     ports:
       # Host :3001 is used by ekaterina-math.ru — bind backend to 3010
       - '127.0.0.1:3010:3001'
@@ -78,6 +79,13 @@ services:
       - '3478:3478/udp'
     volumes:
       - ./infra/livekit.prod.yaml:/etc/livekit.yaml:ro
+    # Production config listens on 7880; the base compose file keeps 7890 for dev.
+    healthcheck:
+      test: ['CMD-SHELL', "grep -q ':1EC8 ' /proc/net/tcp /proc/net/tcp6"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   egress:
     volumes:
@@ -85,17 +93,21 @@ services:
       - egress_backup:/out
 
   transcriber:
+    profiles: [server-ai]
     environment:
       WHISPER_MODEL: ${WHISPER_MODEL:-small}
       WHISPER_DEVICE: ${WHISPER_DEVICE:-cpu}
       WHISPER_COMPUTE_TYPE: ${WHISPER_COMPUTE_TYPE:-int8}
+      WHISPER_BEAM_SIZE: ${WHISPER_BEAM_SIZE:-1}
       HF_HOME: /models
 
   ollama:
+    profiles: [server-ai]
     ports:
       - '127.0.0.1:11434:11434'
 
   ollama-pull:
+    profiles: [server-ai]
     environment:
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}

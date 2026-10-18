@@ -40,7 +40,7 @@ export function LessonJoinLinks({
     if (!showHint) return null;
     return (
       <p className={cn('text-xs text-[rgb(var(--text-3))]', className)}>
-        Ссылки на видеовстречу и доску появятся за 30 минут до начала
+        Урок уже завершён
       </p>
     );
   }

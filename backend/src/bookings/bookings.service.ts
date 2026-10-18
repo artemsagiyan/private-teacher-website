@@ -294,7 +294,12 @@ export class BookingsService {
       (this.config.get<number>('livekit.joinLateMinutes') ?? 120) * 60_000;
     const cutoff = Date.now() - lateMs;
     return bookings
-      .filter((b) => new Date(b.slot.endTime).getTime() >= cutoff)
+      .filter(
+        (b) =>
+          new Date(b.slot.endTime).getTime() >= cutoff ||
+          !b.slot.lesson ||
+          ['waiting', 'starting', 'active'].includes(b.slot.lesson.status),
+      )
       .sort(
         (a, b) =>
           new Date(a.slot.startTime).getTime() -

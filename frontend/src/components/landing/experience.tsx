@@ -45,7 +45,6 @@ const homeworkTasks = [
 ];
 
 export function LandingExperience() {
-  const glow = useRef<HTMLDivElement>(null);
   const [scene, setScene] = useState<Scene>('calendar');
   const [pen, setPen] = useState(PENS[0]);
   const [strokes, setStrokes] = useState(0);
@@ -55,37 +54,29 @@ export function LandingExperience() {
   };
 
   return (
-    <div
-      className="relative"
-      onMouseMove={(event) => {
-        const host = event.currentTarget.getBoundingClientRect();
-        const node = glow.current;
-        if (!node) return;
-        node.style.transform = `translate(${event.clientX - host.left - 180}px, ${event.clientY - host.top - 180}px)`;
-      }}
-    >
-      <div
-        ref={glow}
-        className="pointer-events-none absolute left-0 top-0 z-0 h-[360px] w-[360px] rounded-full bg-[#3F1116]/10 blur-3xl"
-        aria-hidden
-      />
+    <div className="relative">
 
-      <section className="relative z-10 mx-auto grid w-full max-w-6xl items-start gap-10 px-5 py-12 lg:grid-cols-[0.9fr_1.1fr] lg:py-16">
-        <div>
-          <p className="text-sm font-medium text-[#3F1116]">Онлайн-занятия с репетитором</p>
-          <h1 className="mt-3 max-w-xl text-4xl font-normal leading-[1.15] sm:text-5xl">
-            Урок, доска и отчёт родителям — в одном кабинете
+      <section className="relative z-10 mx-auto grid w-full max-w-7xl items-center gap-10 px-5 py-12 sm:py-16 lg:grid-cols-[0.84fr_1.16fr] lg:gap-14 lg:px-8 lg:py-20">
+        <div className="relative z-10">
+          <p className="inline-flex items-center gap-2 rounded-full border border-[#9D7960]/25 bg-[#FFF1E9]/70 px-3.5 py-2 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-[#64343C] shadow-[0_4px_16px_rgb(63_17_22/0.05)]"><span className="h-1.5 w-1.5 rounded-full bg-[#9D7960]" />Онлайн-занятия с репетитором</p>
+          <h1 className="mt-6 max-w-[650px] font-serif text-[2.8rem] font-medium leading-[1.03] tracking-[-0.055em] text-[#3F1116] sm:text-6xl lg:text-[4.25rem]">
+            Математика, в которой появляется <span className="text-[#9D7960]">уверенность</span>
           </h1>
-          <p className="mt-5 max-w-lg text-base leading-7 text-[#64343C]">
-            Ученик записывается на свободное время. На доске можно рисовать сразу, расписание показывает занятую неделю.
+          <p className="mt-6 max-w-lg text-base leading-7 text-[#64343C]/85 sm:text-lg sm:leading-8">
+            Живые уроки, общая доска и подготовка по темам — всё связано в одном спокойном и понятном кабинете.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Link href="/auth/register">
-              <Button size="xl" className="w-full sm:w-auto">Записаться</Button>
+              <Button variant="gradient" size="xl" className="w-full sm:w-auto">Начать занятия</Button>
             </Link>
             <Link href="/auth/login">
-              <Button size="xl" variant="outline" className="w-full sm:w-auto">Войти</Button>
+              <Button size="xl" variant="outline" className="w-full sm:w-auto">Войти в кабинет</Button>
             </Link>
+          </div>
+          <div className="mt-9 flex flex-wrap gap-x-6 gap-y-3 border-t border-[#9D7960]/25 pt-5 text-xs font-medium text-[#64343C]/80">
+            <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#3F1116]" />Видео и доска вместе</span>
+            <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#9D7960]" />План подготовки</span>
+            <span className="flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-[#64343C]" />Отчёт семье</span>
           </div>
         </div>
 
@@ -99,10 +90,11 @@ export function LandingExperience() {
         />
       </section>
 
-      <section id="features" className="relative z-10 px-5 pb-8">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="max-w-xl text-3xl font-normal sm:text-4xl">
-            Карточки открывают кабинет сверху
+      <section id="features" className="relative z-10 px-5 pb-10 pt-5 lg:px-8">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9D7960]">Инструменты занятия</p>
+          <h2 className="mt-3 max-w-2xl font-serif text-3xl font-medium tracking-[-0.04em] text-[#3F1116] sm:text-4xl">
+            Продуманный процесс — от первого слота до результата
           </h2>
           <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             <button type="button" onClick={() => open('calendar')} className={cardClass(scene === 'calendar')}>
@@ -162,22 +154,22 @@ export function LandingExperience() {
         </div>
       </section>
 
-      <section id="how" className="relative z-10 px-5 py-10">
-        <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.8fr_1.2fr]">
-          <h2 className="text-3xl font-normal sm:text-4xl">Как проходит занятие</h2>
+      <section id="how" className="relative z-10 px-5 py-12 lg:px-8 lg:py-20">
+        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[0.75fr_1.25fr]">
+          <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9D7960]">Просто и прозрачно</p><h2 className="mt-3 max-w-sm font-serif text-3xl font-medium tracking-[-0.04em] sm:text-4xl">Как проходит занятие</h2></div>
           <ol className="space-y-3">
             {([
               { n: '1', title: 'Преподаватель открывает время', text: 'В календаре появляется слот. Ученик видит только своего преподавателя.' },
               { n: '2', title: 'Ученик записывается и заходит в урок', text: 'Напоминание приходит за сутки и за час. Видео и доска открываются из кабинета.' },
               { n: '3', title: 'После урока уходит отчёт', text: 'Итоги и домашнее задание приходят ученику. Если указана почта родителя — и ему.' },
             ]).map(({ n, title, text }) => (
-              <li key={n} className="flex gap-4 rounded-lg bg-[#9D7960] p-5 text-[#FFF1E9] shadow-card">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#FFF1E9] text-sm font-medium text-[#64343C]">
+              <li key={n} className="group flex gap-4 rounded-2xl border border-[#9D7960]/20 bg-[#FFF1E9]/80 p-5 text-[#3F1116] shadow-card transition-all hover:-translate-y-0.5 hover:border-[#9D7960]/50 hover:shadow-card-hover sm:p-6">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#3F1116] font-serif text-base font-semibold text-[#FFF1E9] shadow-[0_8px_18px_rgb(63_17_22/0.15)]">
                   {n}
                 </span>
                 <span>
-                  <span className="block text-base font-medium">{title}</span>
-                  <span className="mt-1 block text-sm leading-6 text-[#FEEFDC]">{text}</span>
+                  <span className="block text-base font-semibold">{title}</span>
+                  <span className="mt-1 block text-sm leading-6 text-[#64343C]/80">{text}</span>
                 </span>
               </li>
             ))}
@@ -204,27 +196,28 @@ function Stage({
   onClear: () => void;
 }) {
   return (
-    <div id="stage" className="overflow-hidden rounded-lg bg-[#9D7960] shadow-card">
-      <div className="flex items-center gap-3 border-b border-[#9D7960] px-4 py-3">
-        <img src="/swan.png" alt="" className="h-9 w-9 object-contain" />
-        <p className="text-sm font-medium text-[#FFF1E9]">Живой кабинет</p>
+    <div id="stage" className="relative overflow-hidden rounded-[26px] border border-[#9D7960]/30 bg-[#3F1116] p-2 shadow-[0_28px_75px_rgb(63_17_22/0.22)] sm:p-3">
+      <div className="flex items-center gap-3 px-3 py-3 sm:px-4">
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#FFF1E9]/10 ring-1 ring-white/10"><img src="/swan.png" alt="" className="h-7 w-7 object-contain" /></span>
+        <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-[#FFF1E9]">Живой кабинет</p><p className="mt-0.5 text-[0.65rem] text-[#FEEFDC]/60">Уроки, материалы и прогресс вместе</p></div>
+        <span className="hidden items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[0.62rem] font-medium text-[#FEEFDC]/80 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />Все в одном месте</span>
       </div>
-      <div className="flex gap-1 overflow-x-auto px-3 py-2">
+      <div className="flex gap-1.5 overflow-x-auto px-2 pb-3 sm:px-3">
         {scenes.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => setScene(item.id)}
             className={cn(
-              'shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium',
-              scene === item.id ? 'bg-[#3F1116] text-white' : 'text-[#FFF1E9] hover:bg-[#64343C]',
+              'shrink-0 rounded-full px-3.5 py-2 text-[0.68rem] font-semibold transition-colors',
+              scene === item.id ? 'bg-[#FEEFDC] text-[#3F1116] shadow-sm' : 'text-[#FFF1E9]/70 hover:bg-white/10 hover:text-[#FFF1E9]',
             )}
           >
             {item.title}
           </button>
         ))}
       </div>
-      <div className="h-[440px] overflow-hidden bg-[#FFF1E9] p-4">
+      <div className="min-h-[390px] rounded-[20px] border border-white/10 bg-[#FEEFDC] p-3 sm:min-h-[470px] sm:p-4">
         <div className={scene === 'board' ? 'h-full' : 'hidden'}>
           <BoardPane pen={pen} setPen={setPen} onStroke={onStroke} onClear={onClear} />
         </div>
@@ -232,14 +225,14 @@ function Stage({
           <img
             src="/calendar-week.png"
             alt="Неделя 28 сентября — 4 октября, занятия по алгебре, физике и геометрии"
-            className="h-full w-full rounded-lg object-contain object-left-top"
+            className="w-full rounded-lg object-contain object-left-top"
           />
         )}
         {scene === 'lesson' && (
           <img
             src="/lesson-cats.png"
             alt="Два кота на видеосвязи разговаривают друг с другом"
-            className="h-full w-full rounded-lg object-contain object-left-top"
+            className="w-full rounded-lg object-contain object-left-top"
           />
         )}
         {scene === 'report' && <ReportExample />}
@@ -304,7 +297,7 @@ function BoardPane({
         ref={canvas}
         width={900}
         height={420}
-        className="min-h-0 w-full flex-1 touch-none rounded-lg bg-[#9D7960] shadow-card"
+        className="premium-grid min-h-0 w-full flex-1 touch-none rounded-2xl border border-[#9D7960]/35 bg-[#FFF1E9] shadow-inner"
         onPointerDown={(event) => {
           const ctx = canvas.current?.getContext('2d');
           if (!ctx) return;
@@ -342,7 +335,7 @@ function ReportExample() {
     { title: 'К следующему уроку', items: ['Повторить формулу корней', 'Проговорить, когда дискриминант равен нулю'] },
   ];
   return (
-    <article className="h-full overflow-y-auto rounded-lg bg-[#FEEFDC] p-5 shadow-card">
+    <article className="h-full overflow-y-auto rounded-2xl border border-[#9D7960]/25 bg-[#FFFDF9] p-5 shadow-card">
       <p className="text-xs font-medium text-[#3F1116]">Пример отчёта · 1 октября</p>
       <h3 className="mt-1 text-lg font-medium">Алгебра, подготовка к ОГЭ</h3>
       <p className="mt-3 text-sm leading-6 text-[#64343C]">
@@ -370,7 +363,7 @@ function ReportExample() {
 
 function HomeworkExample() {
   return (
-    <article className="h-full overflow-y-auto rounded-lg bg-[#FEEFDC] p-5 shadow-card">
+    <article className="h-full overflow-y-auto rounded-2xl border border-[#9D7960]/25 bg-[#FFFDF9] p-5 shadow-card">
       <p className="text-xs font-medium text-[#3F1116]">ОГЭ · квадратные уравнения</p>
       <h3 className="mt-1 text-lg font-medium">К следующему занятию</h3>
       <ol className="mt-4 space-y-3">
@@ -387,7 +380,7 @@ function HomeworkExample() {
 
 function PracticeHints() {
   return (
-    <article className="h-full overflow-y-auto rounded-lg bg-[#FEEFDC] p-5 shadow-card">
+    <article className="h-full overflow-y-auto rounded-2xl border border-[#9D7960]/25 bg-[#FFFDF9] p-5 shadow-card">
       <p className="text-xs font-medium text-[#3F1116]">Что решать на уроке</p>
       <h3 className="mt-1 text-lg font-medium">Подсказки к задачам</h3>
       <ul className="mt-4 space-y-3">
@@ -404,14 +397,14 @@ function PracticeHints() {
 
 function cardClass(active: boolean) {
   return cn(
-    'flex h-full flex-col rounded-lg bg-[#FFF1E9] p-5 text-left shadow-card transition hover:-translate-y-0.5 hover:shadow-card-hover',
-    active && 'ring-2 ring-[#3F1116]',
+    'group flex h-full flex-col rounded-2xl border border-[#9D7960]/20 bg-[#FFFDF9]/90 p-5 text-left shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-[#9D7960]/50 hover:shadow-card-hover',
+    active && 'border-[#3F1116]/35 bg-[#FFF1E9] ring-1 ring-[#3F1116]/20',
   );
 }
 
 function IconTile({ children }: { children: ReactNode }) {
   return (
-    <span className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#FFF1E9] text-[#64343C]">
+    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#64343C]/10 text-[#64343C] ring-1 ring-[#64343C]/10">
       {children}
     </span>
   );

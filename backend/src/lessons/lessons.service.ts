@@ -37,6 +37,43 @@ export class LessonsService {
     private readonly notifications: NotificationsService,
   ) {}
 
+  async realtimeTranscript(user: User, lessonId: string, audioBase64: string) {
+    if (user.role !== UserRole.TEACHER) throw new ForbiddenException();
+    const lesson = await this.lessonRepo.findOne({ where: { id: lessonId }, relations: ['teacher'] });
+    if (!lesson || lesson.teacher?.userId !== user.id) throw new ForbiddenException();
+    if (!audioBase64) throw new BadRequestException('Аудиофрагмент пустой');
+    // Browser chunks are base64 encoded and should stay small enough for a
+    // realtime request. Reject malformed/oversized payloads before spending
+    // time on a model call.
+    if (
+      audioBase64.length > 12 * 1024 * 1024 ||
+      !/^[A-Za-z0-9+/]*={0,2}$/.test(audioBase64)
+    ) {
+      throw new BadRequestException('Некорректный аудиофрагмент');
+    }
+    const url = process.env.TRANSCRIBER_URL || 'http://transcriber:8000';
+    try {
+      const response = await fetch(`${url.replace(/\/$/, '')}/transcribe/realtime`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audio_base64: audioBase64, language: process.env.TRANSCRIBER_LANGUAGE || 'ru' }),
+        signal: AbortSignal.timeout(
+          Math.max(10_000, Number(process.env.REALTIME_TRANSCRIBE_TIMEOUT_MS || 120_000)),
+        ),
+      });
+      if (!response.ok) {
+        throw new BadRequestException(
+          response.status === 429
+            ? 'Потоковая транскрипция занята, повторите через несколько секунд'
+            : 'Потоковая транскрипция временно недоступна',
+        );
+      }
+      return response.json();
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      throw new BadRequestException('Потоковая транскрипция временно недоступна');
+    }
+  }
+
   async ensureForSlot(slotId: string): Promise<Lesson> {
     const existing = await this.lessonRepo.findOne({
       where: { slotId },

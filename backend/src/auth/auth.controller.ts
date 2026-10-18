@@ -16,7 +16,6 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterStudentDto } from './dto/register-student.dto';
 import { RegisterTeacherDto } from './dto/register-teacher.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { OauthExchangeDto } from './dto/oauth-exchange.dto';
@@ -61,7 +60,6 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(
     @CurrentUser() user: User,
-    @Body() _dto: RefreshTokenDto,
   ) {
     return this.authService.refreshTokens(user.id);
   }

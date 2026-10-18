@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-import { User, Lock, Mail } from 'lucide-react';
+import { User, Lock, Mail, Copy, ExternalLink } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -148,6 +148,8 @@ function ParentContacts() {
   const [parentName, setParentName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
   const [saving, setSaving] = useState(false);
+  const [familyLink, setFamilyLink] = useState('');
+  const [creatingLink, setCreatingLink] = useState(false);
 
   useEffect(() => {
     api
@@ -173,6 +175,18 @@ function ParentContacts() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const createFamilyLink = async () => {
+    setCreatingLink(true);
+    try {
+      const result = await api.post<{ url: string }>('/family/access');
+      setFamilyLink(result.url);
+      await navigator.clipboard.writeText(result.url);
+      toast.success('Ссылка для родителя скопирована');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Не удалось создать ссылку');
+    } finally { setCreatingLink(false); }
   };
 
   return (
@@ -202,6 +216,11 @@ function ParentContacts() {
           <Button type="submit" isLoading={saving} variant="outline">
             Сохранить контакты
           </Button>
+          <div className="border-t border-[rgb(var(--border))] pt-4">
+            <p className="mb-3 text-xs leading-5 text-[rgb(var(--text-3))]">Поделитесь приватной ссылкой с родителем: в ней будут отчёты, прогресс, домашние задания и оплаты. Создание новой ссылки отключит предыдущую.</p>
+            <Button type="button" onClick={createFamilyLink} isLoading={creatingLink} variant="outline"><ExternalLink className="h-4 w-4" />Создать ссылку для родителя</Button>
+            {familyLink && <div className="mt-3 flex gap-2"><input readOnly value={familyLink} className="min-w-0 flex-1 rounded-lg border border-[rgb(var(--border))] bg-[rgb(var(--surface-2))] px-3 py-2 text-xs" /><Button type="button" size="icon" variant="outline" title="Скопировать ссылку" onClick={() => navigator.clipboard.writeText(familyLink)}><Copy className="h-4 w-4" /></Button></div>}
+          </div>
         </form>
       </CardContent>
     </Card>
